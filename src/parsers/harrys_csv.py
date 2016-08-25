@@ -58,9 +58,16 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
         # Fast forward past the Harry's notice
         data = StringIO("\n".join(datafile.read().split("\n")[1:]))
         reader = csv.DictReader(data)
+        laps = {}
+        fixes = []
         for row in reader:
             fix = Fix()
             for k, v in row.iteritems():
                 fix.setattr(cls.COL_MAPPING[k], v)
 
-            print fix
+            fixes.append(fix)
+            lap_fixes = laps.get(fix.lap_index, [])
+            lap_fixes.append(fix)
+            laps[fix.lap_index] = lap_fixes
+
+        return laps

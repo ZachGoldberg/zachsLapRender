@@ -20,6 +20,10 @@ def build_parser():
     return parser
 
 
+def print_stats(data):
+    print "Number of Laps in Input File: %s" % len(data.keys())
+    print "Total GPS Fix Points: %s" % (sum([len(v) for v in data.values()]))
+
 
 if __name__ == '__main__':
     # Do things with argparse
@@ -29,4 +33,7 @@ if __name__ == '__main__':
 
     parserClass = parsers.find_parser(filename)
     data = parserClass.parse_data(args.datafile)
-    print data
+
+    if args.analyze:
+        print_stats(data)
+        sys.exit(0)
