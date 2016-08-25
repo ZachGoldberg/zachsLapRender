@@ -1,5 +1,7 @@
 import csv
+from StringIO import StringIO
 from . import LaptimeParser
+from models import Fix
 
 class HarrysCSVParser(LaptimeParser):
 
@@ -42,21 +44,23 @@ class HarrysCSVParser(LaptimeParser):
 
 
     @classmethod
-    def is_valid(cls, filename, data):
+    def is_valid(cls, filename):
         if ".csv" in filename:
             return True
 
     @classmethod
-    def parse_data(cls, data):
+    def parse_data(cls, datafile):
         """head -n 3 sample.csv
         Harry's GPS LapTimer
 INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_M,HEIGHT_FT,HEADING_DEG,GPSDIFFERENTIAL[UNKNOWN/2D3D/DGPS/INVALID],GPSFIX[NOFIX/2D/3D/UNKNOWN],SATELLITES,HDOP,ACCURACY_M,DISTANCE_KM,DISTANCE_MILE,ACCELERATIONSOURCE[CALCULATED/MEASURED/UNDEFINED],LATERALG,LINEALG,LEAN,RPM,MAF,WHEEL_SPEED_KPH,WHEEL_SPEED_MPH,THROTTLE,GEAR,FUEL,COOLANT_CELSIUS,OIL_CELSIUS,IAT_CELSIUS,MAP
 57358,381,14-AUG-16,16:57:02.65,0.000000,34.874742,-118.258734,102.600000,63.752684,740.000000,2427.821526,288.1,2,3,11,0.700000,4.9,0.000000,0.000000,1,0.15,0.34,8.500000,0,0.000000,0.000000,0.000000,0.000000,0,0.000000,0.000000,0.000000,0.000000,0.000000
         """
         # Fast forward past the Harry's notice
-        data = "\n".join(data.split("\n")[1:])
-
+        data = StringIO("\n".join(datafile.read().split("\n")[1:]))
         reader = csv.DictReader(data)
-        for fix_data in reader:
+        for row in reader:
             fix = Fix()
-            print fix_data
+            for k, v in row.iteritems():
+                fix.setattr(cls.COL_MAPPING[k], v)
+
+            print fix

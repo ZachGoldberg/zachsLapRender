@@ -52,3 +52,11 @@ class Fix(object):
             raise Exception("Invalid Attr")
 
         setattr(self, attr, val)
+
+
+    def __str__(self):
+        return "Fix %s Lap %s @%s %s:%s" % (self.fix_id,
+                                             self.lap_index,
+                                             self.lap_time,
+                                             self.lat,
+                                             self.long)

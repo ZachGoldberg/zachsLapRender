@@ -25,12 +25,8 @@ if __name__ == '__main__':
     # Do things with argparse
     args = build_parser().parse_args()
 
-    filedata = None
-    if args.datafile:
-        filedata = args.datafile.read()
-
     filename = args.datafile.name
 
-    parserClass = parsers.find_parser(filename, filedata)
-    data = parserClass.parse_data(filedata)
+    parserClass = parsers.find_parser(filename)
+    data = parserClass.parse_data(args.datafile)
     print data
