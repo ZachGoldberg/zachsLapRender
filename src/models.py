@@ -1,7 +1,3 @@
-
-class LapList(object):
-    pass
-
 class Day(object):
     pass
 
