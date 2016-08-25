@@ -5,7 +5,38 @@ class Session(object):
     pass
 
 class Lap(object):
-    pass
+    def __init__(self, lapnum, fixes):
+        self.lapnum = lapnum
+        self.fixes = fixes
+        self._calc()
+
+    def _calc(self):
+        # find lap length
+        max_time = 0
+        end_time = 0
+        start_time = 0
+        min_time = 999999
+        for fix in self.fixes:
+            if fix.lap_time <= min_time:
+                min_time = fix.lap_time
+                start_time = fix.wall_time
+
+            if fix.lap_time > max_time:
+                max_time = fix.lap_time
+                end_time = fix.wall_time
+
+        self.lap_time = max_time
+        self.end_time = end_time
+        self.start_time = start_time
+
+    def details(self):
+        return "Lap Length: %s\nLap Start: %s\nLap End: %s" % (self.lap_time,
+                                                               self.start_time,
+                                                               self.end_time)
+
+    def __str__(self):
+        return "Lap %s, %s fixes" % (self.lapnum, len(self.fixes))
+
 
 class Fix(object):
     FIX_ID = "fix_id"
@@ -50,6 +81,11 @@ class Fix(object):
     def setattr(self, attr, val):
         if attr not in self.ATTRS:
             raise Exception("Invalid Attr")
+
+        try:
+            val = float(val)
+        except:
+            pass
 
         setattr(self, attr, val)
 

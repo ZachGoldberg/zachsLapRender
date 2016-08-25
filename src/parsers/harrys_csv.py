@@ -1,7 +1,7 @@
 import csv
 from StringIO import StringIO
 from . import LaptimeParser
-from models import Fix
+from models import Fix, Lap
 
 class HarrysCSVParser(LaptimeParser):
 
@@ -58,7 +58,7 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
         # Fast forward past the Harry's notice
         data = StringIO("\n".join(datafile.read().split("\n")[1:]))
         reader = csv.DictReader(data)
-        laps = {}
+        raw_laps = {}
         fixes = []
         for row in reader:
             fix = Fix()
@@ -66,8 +66,12 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
                 fix.setattr(cls.COL_MAPPING[k], v)
 
             fixes.append(fix)
-            lap_fixes = laps.get(fix.lap_index, [])
+            lap_fixes = raw_laps.get(fix.lap_index, [])
             lap_fixes.append(fix)
-            laps[fix.lap_index] = lap_fixes
+            raw_laps[fix.lap_index] = lap_fixes
+
+        laps = []
+        for lapnum, fixes in raw_laps.iteritems():
+            laps.append(Lap(lapnum, fixes))
 
         return laps
