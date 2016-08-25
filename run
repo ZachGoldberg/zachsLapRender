@@ -45,7 +45,7 @@ run_zachs() {
 }
 
 run_test_harrys_csv_parser() {
-    run_zachs --analyze --inputfile=samples/LapTimerGPSRecDB.csv
+    run_zachs --analyze --input-data-file=samples/LapTimerGPSRecDB.csv
 }
 
 run_install_completion () {

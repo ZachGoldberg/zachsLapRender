@@ -42,6 +42,11 @@ class HarrysCSVParser(LaptimeParser):
 
 
     @classmethod
+    def is_valid(cls, filename, data):
+        if ".csv" in filename:
+            return True
+
+    @classmethod
     def parse_data(cls, data):
         """head -n 3 sample.csv
         Harry's GPS LapTimer
@@ -53,4 +58,5 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
 
         reader = csv.DictReader(data)
         for fix_data in reader:
-            pass
+            fix = Fix()
+            print fix_data
