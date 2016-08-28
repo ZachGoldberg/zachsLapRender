@@ -8,7 +8,7 @@ from utils import collect_videos
 
 import argparse
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,10 @@ def build_parser():
                         type=str,
                         help='Folder containing videos with timestamps synced to telemetry')
 
+    parser.add_argument('--verbose', dest='verbose',
+                        action='store_true',
+                        help='Input structured data telemetry file')
+
     return parser
 
 
@@ -54,6 +58,9 @@ def print_video_stats(videos):
 if __name__ == '__main__':
     # Do things with argparse
     args = build_parser().parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     if args.datafile:
         filename = args.datafile.name

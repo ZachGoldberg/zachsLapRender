@@ -1,7 +1,10 @@
-#import cv2
+import cv2
 import os
 
+import settings
+
 from datetime import datetime
+from utils import creation_time
 
 class Video(object):
     def __init__(self, filename):
@@ -20,6 +23,21 @@ class Video(object):
         self.last_access_at = datetime.fromtimestamp(res.st_atime)
         self.created_at =  datetime.fromtimestamp(res.st_ctime)
 
+        # Don't bother with obviously not video files
+        _, ext = os.path.splitext(self.filename)
+        if ext.lower() not in settings.VALID_VIDEO_EXTENSIONS:
+            return
+
+        cap = None
+        # Verify that it's a valid video that cv2 can inspect
+        try:
+            cap = cv2.VideoCapture(self.filename)
+            cap.release()
+        except:
+            return
+
+        self.file_start_date = creation_time(self.filename)
+        self.is_valid_video = True
 
     def is_valid(self):
         return self.is_valid_video

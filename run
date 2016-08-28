@@ -45,11 +45,11 @@ run_zachs() {
 }
 
 run_test_harrys_csv_parser() {
-    run_zachs --analyze-data --input-data-file=samples/LapTimerGPSRecDB.csv
+    run_zachs --analyze-data --input-data-file=samples/LapTimerGPSRecDB.csv $@
 }
 
 run_test_video_analyze() {
-    run_zachs --analyze-videos --video-directory=samples/
+    run_zachs --analyze-videos --video-directory=samples/ $@
 }
 
 run_install_completion () {
