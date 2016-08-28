@@ -1,13 +1,38 @@
+#import cv2
+import os
+
+from datetime import datetime
 
 class Video(object):
     def __init__(self, filename):
         self.filename = filename
+        self.file_start_date = None
+        self.last_modified_at = None
+        self.last_access_at = None
+        self.created_at = None
+        self.is_valid_video = False
         self._calc()
 
     def _calc(self):
         # Open the file, find timestmps etc.
-        pass
+        res = os.stat(self.filename)
+        self.last_modified_at = datetime.fromtimestamp(res.st_mtime)
+        self.last_access_at = datetime.fromtimestamp(res.st_atime)
+        self.created_at =  datetime.fromtimestamp(res.st_ctime)
 
+
+    def is_valid(self):
+        return self.is_valid_video
+
+    def start_time(self):
+        if self.file_start_date:
+            return self.file_start_date
+        else:
+            return self.created_at
+
+    def __str__(self):
+        return "%s starting at %s" % (self.filename,
+                                      self.start_time())
 
 class Day(object):
     pass
