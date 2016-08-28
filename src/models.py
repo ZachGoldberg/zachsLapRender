@@ -1,3 +1,14 @@
+
+class Video(object):
+    def __init__(self, filename):
+        self.filename = filename
+        self._calc()
+
+    def _calc(self):
+        # Open the file, find timestmps etc.
+        pass
+
+
 class Day(object):
     pass
 
