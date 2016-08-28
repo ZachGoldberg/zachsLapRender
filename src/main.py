@@ -82,5 +82,9 @@ if __name__ == '__main__':
 
     videos = collect_videos(args.videodir)
 
+    if laps:
+        for video in videos:
+            video.match_laps(laps)
+
     if args.analyze_videos:
         print_video_stats(videos)

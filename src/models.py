@@ -3,7 +3,7 @@ import os
 
 import settings
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils import creation_time
 
 class Video(object):
@@ -14,9 +14,17 @@ class Video(object):
         self.last_access_at = None
         self.created_at = None
         self.is_valid_video = False
-        self._calc()
+        self.fps = None
+        self.frame_count = None
+        self.width = None
+        self.height = None
+        self.duration = None
+        self.contained_laps = []
 
-    def _calc(self):
+        self._calc_times()
+
+
+    def _calc_times(self):
         # Open the file, find timestmps etc.
         res = os.stat(self.filename)
         self.last_modified_at = datetime.fromtimestamp(res.st_mtime)
@@ -29,15 +37,26 @@ class Video(object):
             return
 
         cap = None
-        # Verify that it's a valid video that cv2 can inspect
+        # Verify that it's a valid video that cv2 can inspect,
+        # record some video metadata whilst its open
         try:
             cap = cv2.VideoCapture(self.filename)
+            self.fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
+            self.frame_count = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+            self.duration = timedelta(seconds=self.frame_count / self.fps)
+            self.width  = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
+            self.height = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
             cap.release()
         except:
             return
 
         self.file_start_date = creation_time(self.filename)
         self.is_valid_video = True
+
+    def match_laps(self, laps):
+        start_time = self.start_time
+        for lap in laps:
+            pass
 
     def is_valid(self):
         return self.is_valid_video
@@ -48,9 +67,21 @@ class Video(object):
         else:
             return self.created_at
 
+    def end_time(self):
+        if self.duration:
+            return self.start_time() + self.duration
+        else:
+            return None
+
     def __str__(self):
-        return "%s starting at %s" % (self.filename,
-                                      self.start_time())
+        return "%s (%sx%s) starting at %s, %s long, ending at %s" % (
+            self.filename,
+            self.width,
+            self.height,
+            self.start_time(),
+            self.duration,
+            self.end_time()
+        )
 
 class Day(object):
     pass
