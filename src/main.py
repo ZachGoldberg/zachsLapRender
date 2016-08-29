@@ -5,6 +5,7 @@ import sys
 
 from models import Fix, Lap, Session, Day
 from utils import collect_videos
+import youtube
 
 import argparse
 
@@ -50,6 +51,12 @@ def build_parser():
     parser.add_argument("-m", "--manual-offset",
                         dest="manual_offset", action='store_true',
                         help="Allow the user to manually select the time offset for each video file")
+
+    parser.add_argument("-y", "--enable-youtube",
+                        dest="youtube", action='store_true',
+                        help="Upload all laps to youtube")
+
+
     return parser
 
 
@@ -118,9 +125,15 @@ if __name__ == '__main__':
         for video in matched_videos:
             video.calibrate_offset()
 
+    # Collect user's YouTube OAuth credentials before starting rendering process,
+    # that way we can be finished with all user input and just run
+    if args.youtube:
+        yt_args = youtube.build_args()
+        youtube.get_authenticated_service(yt_args)
 
     # For now, just create a new .mp4 with each lap
     # we've discovered.
     # Then we'll write small bits to each of those, and build from there
     for video in matched_videos:
         video.render_laps(args.outputdir or "/tmp/")
+        youtube.upload_video(video)
