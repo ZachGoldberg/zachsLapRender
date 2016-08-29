@@ -3,6 +3,7 @@ import os
 import subprocess
 
 from datetime import datetime
+from dateutil import parser
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,9 @@ def creation_time(filename):
     # TODO ZG: This feels remarkably frail...
     time = str(t[14][18:37])
     try:
-        return datetime.strptime(time, "%Y-%m-%d %H:%M:%S.%f")
+        return parser.parse(time)
     except:
-        try:
-            return datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
-        except:
-            return None
-
+        return None
 
 def collect_videos(dirname):
     try:

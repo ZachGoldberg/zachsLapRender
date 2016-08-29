@@ -52,6 +52,14 @@ run_test_video_analyze() {
     run_zachs --analyze-videos --video-directory=samples/ $@
 }
 
+run_test_video_matching() {
+    run_zachs --analyze-videos --video-directory=samples/ $@
+}
+
+run_test_real_video() {
+    run_zachs --analyze-videos -vd="/home/zgoldberg/Videos/RacingVideos/Streets8142016/" --input-data-file=samples/LapTimerGPSRecDB.csv $@
+}
+
 run_install_completion () {
     echo "[ -x $PWD/run ] && eval \"\`$PWD/run completion\`\"" >> ~/.bashrc
 

@@ -31,7 +31,7 @@ def build_parser():
                         type=argparse.FileType('r'),
                         help='Input structured data telemetry file')
 
-    parser.add_argument('--video-directory', dest='videodir',
+    parser.add_argument('-vd', '--video-directory', dest='videodir',
                         type=str,
                         help='Folder containing videos with timestamps synced to telemetry')
 

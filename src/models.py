@@ -1,8 +1,10 @@
 import cv2
 import os
-
+import pytz
 import settings
+import tzlocal
 
+from dateutil import parser
 from datetime import datetime, timedelta
 from utils import creation_time
 
@@ -19,7 +21,7 @@ class Video(object):
         self.width = None
         self.height = None
         self.duration = None
-        self.contained_laps = []
+        self.matched_laps = []
 
         self._calc_times()
 
@@ -54,22 +56,35 @@ class Video(object):
         self.is_valid_video = True
 
     def match_laps(self, laps):
-        start_time = self.start_time
         for lap in laps:
-            pass
+            self.match_lap(lap)
+
+    def match_lap(self, lap):
+        print lap.start_time
+        if self.start_time <= lap.start_time <= self.end_time:
+            import pdb; pdb.set_trace()
+            start_frame = (lap.start_time - self.start_time) / self.fps
+
+            lap_info = {
+                "lap": lap,
+                "start_frame": start_frame
+            }
+            self.matched_laps.append(lap_info)
 
     def is_valid(self):
         return self.is_valid_video
 
+    @property
     def start_time(self):
         if self.file_start_date:
             return self.file_start_date
         else:
             return self.created_at
 
+    @property
     def end_time(self):
         if self.duration:
-            return self.start_time() + self.duration
+            return self.start_time + self.duration
         else:
             return None
 
@@ -78,9 +93,9 @@ class Video(object):
             self.filename,
             self.width,
             self.height,
-            self.start_time(),
+            self.start_time,
             self.duration,
-            self.end_time()
+            self.end_time
         )
 
 class Day(object):
@@ -93,6 +108,7 @@ class Lap(object):
     def __init__(self, lapnum, fixes):
         self.lapnum = lapnum
         self.fixes = fixes
+        self.date = None
         self._calc()
 
     def _calc(self):
@@ -101,18 +117,29 @@ class Lap(object):
         end_time = 0
         start_time = 0
         min_time = 999999
+        utc = ""
+        if self.fixes and self.fixes[0].is_utc:
+            utc = " UTC"
+
         for fix in self.fixes:
+
             if fix.lap_time <= min_time:
                 min_time = fix.lap_time
                 start_time = fix.wall_time
-
+                self.date = parser.parse(fix.date)
             if fix.lap_time > max_time:
                 max_time = fix.lap_time
                 end_time = fix.wall_time
 
+
         self.lap_time = max_time
-        self.end_time = end_time
-        self.start_time = start_time
+        self.start_time = parser.parse("%s %s %s" % (fix.date, start_time, utc))
+        self.end_time = parser.parse("%s %s %s" % (fix.date, end_time, utc))
+
+        if utc:
+            self.start_time = self.start_time.astimezone(tzlocal.get_localzone())
+            self.end_time = self.end_time.astimezone(tzlocal.get_localzone())
+
 
     def details(self):
         return "Lap Length: %s\nLap Start: %s\nLap End: %s" % (self.lap_time,
@@ -163,6 +190,12 @@ class Fix(object):
              OIL_C, THROTTLE, SPEED_MPH, LAP_INDEX, HEADING_DEG, COOLANT_C, GPS_FIX_TYPE, LAT_G,
              GPS_DIFF, DISTANCE_KM, ODB_MPH, WALL_TIME, LAT, RPM, SPEED_KPH]
 
+    DATETIME_ATTRS = [WALL_TIME]
+
+    def __init__(self, is_utc=False):
+        self.is_utc = is_utc
+
+
     def setattr(self, attr, val):
         if attr not in self.ATTRS:
             raise Exception("Invalid Attr")
@@ -173,7 +206,6 @@ class Fix(object):
             pass
 
         setattr(self, attr, val)
-
 
     def __str__(self):
         return "Fix %s Lap %s @%s %s:%s" % (self.fix_id,

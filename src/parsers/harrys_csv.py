@@ -61,7 +61,7 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
         raw_laps = {}
         fixes = []
         for row in reader:
-            fix = Fix()
+            fix = Fix(is_utc=True)
             for k, v in row.iteritems():
                 fix.setattr(cls.COL_MAPPING[k], v)
 
