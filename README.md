@@ -14,3 +14,8 @@ Requirements:
 
 
 ./run test-harrys-csv-parser   # Tests the Harrys GPS DB CSV Parser and prints some basic output
+
+
+TODO:
+ Store offsets in some kind of config / preference file so I dont have to do it
+ everytime during testing...

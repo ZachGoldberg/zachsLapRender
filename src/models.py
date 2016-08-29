@@ -62,6 +62,19 @@ class Video(object):
         self.file_start_date = creation_time(self.filename)
         self.is_valid_video = True
 
+
+    def render_frame(self, frame, start_frame, framenum, lap):
+
+        frames_in = framenum - start_frame
+        seconds_total_in = frames_in / self.fps
+        minutes_in = int(seconds_total_in / 60)
+        seconds_in = seconds_total_in % 60
+        txt = "Lap Time: %.2d:%06.3f" % (minutes_in, seconds_in)
+
+        cv2.putText(frame, txt, (200, 100), cv2.FONT_HERSHEY_PLAIN, 4,
+                    (255, 255, 255), 2, cv2.CV_AA)
+        return frame
+
     def render_laps(self, outputdir):
         for lapinfo in self.matched_laps:
             # Load up the old video
@@ -101,7 +114,7 @@ class Video(object):
                 ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
-                    out.write(frame)
+                    out.write(self.render_frame(frame, start_frame, framenum, lapinfo["lap"]))
                     frames_writen += 1
                     if frames_writen % 20 == 0:
                         logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
@@ -154,8 +167,6 @@ class Video(object):
             subprocess.call(cmd, shell=True)
 
             logger.debug("Finished with %s" % final_newfname)
-
-
 
     def calibrate_offset(self):
         if not self.matched_laps:
