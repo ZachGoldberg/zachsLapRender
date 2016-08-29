@@ -69,10 +69,20 @@ class Video(object):
         seconds_total_in = frames_in / self.fps
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
-        txt = "Lap Time: %.2d:%06.3f" % (minutes_in, seconds_in)
 
+
+        # Render lap-clock
+        txt = "Lap Time: %.2d:%06.3f" % (minutes_in, seconds_in)
         cv2.putText(frame, txt, (200, 100), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
+
+        # Render MPH
+        # Erg, first figure out MPH
+        mph = lap.get_mph_at_time(seconds_in)
+        mph_txt = "%6.2f MPH" % mph
+        cv2.putText(frame, mph_txt, (900, 100), cv2.FONT_HERSHEY_PLAIN, 4,
+                    (255, 255, 255), 2, cv2.CV_AA)
+
         return frame
 
     def render_laps(self, outputdir):
@@ -297,6 +307,40 @@ class Lap(object):
         self.fixes = fixes
         self.date = None
         self._calc()
+
+
+    def get_mph_at_time(self, seconds):
+        # This timestamp should be inbetween two fixes
+        # Find which two, then "interpolate" MPH between them
+
+        if seconds < self.fixes[0].lap_time:
+            return self.fixes[0].speed_mph
+
+        for i in xrange(len(self.fixes)):
+            if i+1 > len(self.fixes):
+                break
+            this_fix = self.fixes[i]
+            next_fix = self.fixes[i+1]
+
+            if this_fix.lap_time <= seconds and next_fix.lap_time >= seconds:
+                total_delta = next_fix.lap_time - this_fix.lap_time
+                this_delta = seconds - this_fix.lap_time
+                percentage = this_delta / total_delta
+                speed_delta = this_fix.speed_mph - next_fix.speed_mph
+                speed_delta_mod = -1 * speed_delta * percentage
+                speed = this_fix.speed_mph + speed_delta_mod
+
+                #print this_fix.lap_time, this_fix.speed_mph
+                #print next_fix.lap_time, next_fix.speed_mph
+                #print total_delta
+                #print seconds
+                #print this_delta, percentage
+                #print speed_delta, speed_delta_mod, speed
+                #print "-" * 100
+                return speed
+
+        # Erg, just use the last one?
+        return fixes[-1].speed_mph
 
     def _calc(self):
         # find lap length
