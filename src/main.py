@@ -89,11 +89,7 @@ if __name__ == '__main__':
         print_lap_stats(laps)
         sys.exit(0)
 
-    videos = collect_videos(args.videodir)
-
-    if laps:
-        for video in videos:
-            video.match_laps(laps)
+    videos = collect_videos(args.videodir, laps)
 
     if args.analyze_videos:
         print_video_stats(videos)

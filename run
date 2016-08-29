@@ -61,7 +61,7 @@ run_test_real_video_analyze() {
 }
 
 run_test_real_video() {
-    run_zachs -m -vd="/home/zgoldberg/Videos/RacingVideos/Streets8142016/" --input-data-file=samples/LapTimerGPSRecDB.csv $@
+    run_zachs  -vd="/home/zgoldberg/Videos/RacingVideos/Streets8142016/" --input-data-file=samples/LapTimerGPSRecDB.csv $@
 }
 
 run_install_completion () {

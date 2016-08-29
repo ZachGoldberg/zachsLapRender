@@ -28,7 +28,10 @@ def creation_time(filename):
     except:
         return None
 
-def collect_videos(dirname):
+def collect_videos(dirname, laps=None):
+    if not laps:
+        laps = []
+
     try:
         files = os.listdir(dirname)
     except:
@@ -43,6 +46,7 @@ def collect_videos(dirname):
 
         video = Video(os.path.join(dirname, fname))
         if video.is_valid():
+            video.match_laps(laps)
             videos.append(video)
             logging.info("Found a video: %s" % video)
         else:

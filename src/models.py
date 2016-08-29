@@ -3,7 +3,9 @@ import logging
 import os
 import pytz
 import settings
+import subprocess
 import tzlocal
+import wave
 
 from dateutil import parser
 from datetime import datetime, timedelta
@@ -65,24 +67,33 @@ class Video(object):
             # Load up the old video
             oldcap = cv2.VideoCapture(self.filename)
 
-            newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
+            newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
+                lapinfo["lap"].lapnum,
+                lapinfo["lap"].lap_time))
+
+            final_newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
                 lapinfo["lap"].lapnum,
                 lapinfo["lap"].lap_time))
 
             logger.info("Rendering %s from %s..." % (newfname, self.filebase))
-            # Create a new videowriter file
-            fourcc = cv2.cv.CV_FOURCC(*'MJPG')
-            out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
 
             # Include the frame offset from calibration
             start_frame = lapinfo['start_frame'] + self.frame_offset
+            start_time = start_frame / self.fps
             end_frame = lapinfo['end_frame'] + self.frame_offset
 
             total_frames = end_frame - start_frame
+            duration = total_frames / self.fps
 
             framenum = start_frame
             frames_writen = 0
             skipped = 0
+
+
+            # Create a new videowriter file
+            fourcc = cv2.cv.CV_FOURCC(*'MJPG')
+            out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
+
             logger.debug("Seeking to lap start at %s..." % framenum)
             oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             while(oldcap.isOpened()):
@@ -106,6 +117,45 @@ class Video(object):
             oldcap.release()
             out.release()
             cv2.destroyAllWindows()
+
+            logger.debug("Extracting audio...")
+            audiofile = "/tmp/zachsaudio.wav"
+            newaudiofile = "/tmp/zachaudioout.wav"
+            subprocess.call(
+                "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (self.filename, audiofile),
+                shell=True)
+
+            old_audio = wave.open(audiofile, 'rb')
+            new_audio = wave.open(newaudiofile, 'wb')
+
+            framerate = old_audio.getframerate()
+            start_frame = float(start_time * framerate)
+            end_frame = start_frame + (duration * framerate)
+
+            pos = start_time * framerate
+
+            # A ghetto "seek"
+            old_audio.readframes(int(pos))
+
+            relaventframes = old_audio.readframes(int(end_frame - start_frame))
+
+            new_audio.setnchannels(old_audio.getnchannels())
+            new_audio.setsampwidth(old_audio.getsampwidth())
+            new_audio.setframerate(framerate)
+            new_audio.writeframes(relaventframes)
+
+            new_audio.close()
+            old_audio.close()
+
+            logger.debug("Merging video and audio data...")
+            cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
+                    newfname, newaudiofile, final_newfname)
+
+            subprocess.call(cmd, shell=True)
+
+            logger.debug("Finished with %s" % final_newfname)
+
+
 
     def calibrate_offset(self):
         if not self.matched_laps:
@@ -172,7 +222,7 @@ class Video(object):
     def match_lap(self, lap):
         if self.start_time <= lap.start_time <= self.end_time:
             start_seconds = (lap.start_time - self.start_time).total_seconds()
-            start_frame = self.frame_offset + int((start_seconds) * self.fps)
+            start_frame = int((start_seconds) * self.fps)
 
             """
             print "Lap Start: %s" %  lap.start_time
