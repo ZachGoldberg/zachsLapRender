@@ -78,7 +78,7 @@ class Video(object):
 
         # Render MPH
         # Erg, first figure out MPH
-        mph = lap.get_mph_at_time(seconds_in)
+        mph = lap.get_mph_at_time(seconds_total_in)
         mph_txt = "%6.2f MPH" % mph
         cv2.putText(frame, mph_txt, (900, 100), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
