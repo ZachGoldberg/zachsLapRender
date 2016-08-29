@@ -128,12 +128,13 @@ if __name__ == '__main__':
     # Collect user's YouTube OAuth credentials before starting rendering process,
     # that way we can be finished with all user input and just run
     if args.youtube:
-        yt_args = youtube.build_args()
-        youtube.get_authenticated_service(yt_args)
+        youtube.get_authenticated_service()
 
     # For now, just create a new .mp4 with each lap
     # we've discovered.
     # Then we'll write small bits to each of those, and build from there
     for video in matched_videos:
-        video.render_laps(args.outputdir or "/tmp/")
-        youtube.upload_video(video)
+        lapvideos = video.render_laps(args.outputdir or "/tmp/")
+        for lapvideo in lapvideos:
+            video_id = youtube.upload_video(video, lapvideo)
+            print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id

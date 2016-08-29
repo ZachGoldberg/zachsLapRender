@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
+import argparse
 import httplib
 import httplib2
+import logging
 import os
 import random
 import sys
@@ -69,20 +71,23 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
                                    CLIENT_SECRETS_FILE))
 
 VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
-
+ADDED = False
 
 def build_args(argstring=""):
-    argparser.add_argument("--file", help="Video file to upload")
-    argparser.add_argument("--title", help="Video title", default="Test Title")
-    argparser.add_argument("--description", help="Video description",
-                           default="Test Description")
-    argparser.add_argument("--category", default="22",
-                           help="Numeric video category. " +
-                           "See https://developers.google.com/youtube/v3/docs/videoCategories/list")
-    argparser.add_argument("--keywords", help="Video keywords, comma separated",
-                           default="")
-    argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES,
-                           default=VALID_PRIVACY_STATUSES[0], help="Video privacy status.")
+    global ADDED
+    if not ADDED:
+        argparser.add_argument("--file", help="Video file to upload")
+        argparser.add_argument("--title", help="Video title", default="Test Title")
+        argparser.add_argument("--description", help="Video description",
+                               default="Test Description")
+        argparser.add_argument("--category", default="22",
+                               help="Numeric video category. " +
+                               "See https://developers.google.com/youtube/v3/docs/videoCategories/list")
+        argparser.add_argument("--keywords", help="Video keywords, comma separated",
+                               default="")
+        argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES,
+                               default=VALID_PRIVACY_STATUSES[0], help="Video privacy status.")
+        ADDED = True
 
     args = argparser.parse_args(argstring)
     return args
@@ -91,6 +96,8 @@ def build_args(argstring=""):
 def get_authenticated_service(args=None):
   if not args:
     args = build_args()
+
+  print args
   flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE,
     scope=YOUTUBE_UPLOAD_SCOPE,
     message=MISSING_CLIENT_SECRETS_MESSAGE)
@@ -105,13 +112,21 @@ def get_authenticated_service(args=None):
     http=credentials.authorize(httplib2.Http()))
 
 
-def upload_video(video):
+def upload_video(video, lapvideo):
+    args = argparse.Namespace()
+    args.file = lapvideo
+    args.title = "Zachs Lap Render: %s" % os.path.basename(lapvideo)
+    args.privacyStatus = "unlisted"
+    args.keywords = []
+    args.description = args.title
+    args.category = 22
+    args.auth_host_name = 'localhost'
+    args.auth_host_port = [8080, 8090]
+    args.logging_level = 'INFO'
+    args.noauth_local_webserver = False
 
-    argstr = "--file %s --title %s --privacyStatus unlisted" % (
-        video.filebase, "Zachs Lap Render: %s" % video.filebase)
-    args = build_args(argstr)
     service = get_authenticated_service(args)
-    initialize_upload(service, args)
+    return initialize_upload(service, args)
 
 def initialize_upload(youtube, options):
   tags = None
@@ -148,7 +163,7 @@ def initialize_upload(youtube, options):
     media_body=MediaFileUpload(options.file, chunksize=-1, resumable=True)
   )
 
-  resumable_upload(insert_request)
+  return resumable_upload(insert_request)
 
 # This method implements an exponential backoff strategy to resume a
 # failed upload.
@@ -163,6 +178,7 @@ def resumable_upload(insert_request):
       if response is not None:
         if 'id' in response:
           print "Video id '%s' was successfully uploaded." % response['id']
+          return response['id']
         else:
           exit("The upload failed with an unexpected response: %s" % response)
     except HttpError, e:

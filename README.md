@@ -20,6 +20,7 @@ TODO:
  - Store offsets in some kind of config / preference file so I dont have to do it
  everytime during testing...
  - Render (# CPU) videos at once, make this an optional flag
+ - Upload videos in parallel after rendering
 
 
 Google Client ID: 767886164356-3sp661b4gk9o6kmdn06pqqrf708p5c3b.apps.googleusercontent.com

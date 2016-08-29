@@ -76,6 +76,8 @@ class Video(object):
         return frame
 
     def render_laps(self, outputdir):
+        lapvideos = []
+
         for lapinfo in self.matched_laps:
             # Load up the old video
             oldcap = cv2.VideoCapture(self.filename)
@@ -87,6 +89,8 @@ class Video(object):
             final_newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
                 lapinfo["lap"].lapnum,
                 lapinfo["lap"].lap_time))
+
+            lapvideos.append(final_newfname)
 
             logger.info("Rendering %s from %s..." % (newfname, self.filebase))
 
@@ -104,7 +108,7 @@ class Video(object):
 
 
             # Create a new videowriter file
-            fourcc = cv2.cv.CV_FOURCC(*'MJPG')
+            fourcc = cv2.cv.CV_FOURCC(*'XVID')
             out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
 
             logger.debug("Seeking to lap start at %s..." % framenum)
@@ -167,6 +171,9 @@ class Video(object):
             subprocess.call(cmd, shell=True)
 
             logger.debug("Finished with %s" % final_newfname)
+
+
+        return lapvideos
 
     def calibrate_offset(self):
         if not self.matched_laps:
