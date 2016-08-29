@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import tzlocal
 
 from datetime import datetime
 from dateutil import parser
@@ -18,10 +19,12 @@ def creation_time(filename):
         return None
     t = out.splitlines()
 
-    # TODO ZG: This feels remarkably frail...
+    # TODO ZG: This feels remarkably fragile...
     time = str(t[14][18:37])
     try:
-        return parser.parse(time)
+        lz =  tzlocal.get_localzone()
+        parsed = lz.localize(parser.parse(time))
+        return parsed
     except:
         return None
 

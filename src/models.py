@@ -63,7 +63,7 @@ class Video(object):
         print lap.start_time
         if self.start_time <= lap.start_time <= self.end_time:
             import pdb; pdb.set_trace()
-            start_frame = (lap.start_time - self.start_time) / self.fps
+            start_frame = int(((lap.start_time - self.start_time).total_seconds()) / self.fps)
 
             lap_info = {
                 "lap": lap,
