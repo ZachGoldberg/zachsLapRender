@@ -37,12 +37,19 @@ def build_parser():
 
     parser.add_argument("-v", '--verbose', dest='info_verbose',
                         action='store_true',
-                        help='Input structured data telemetry file')
+                        help='Enable verbose logging')
 
     parser.add_argument("-vv", dest='debug_verbose',
                         action='store_true',
-                        help='Input structured data telemetry file')
+                        help='Enable even more verbose logging')
 
+    parser.add_argument("-o", "--output-directory",
+                        dest="outputdir", type=str,
+                        help="Output directory for generated videos")
+
+    parser.add_argument("-m", "--manual-offset",
+                        dest="manual_offset", action='store_true',
+                        help="Allow the user to manually select the time offset for each video file")
     return parser
 
 
@@ -74,7 +81,9 @@ if __name__ == '__main__':
     if args.datafile:
         filename = args.datafile.name
         parserClass = parsers.find_parser(filename)
+        logger.info("Parsing telemetry with %s" % parserClass)
         laps = parserClass.parse_data(args.datafile)
+        logger.info("Found %s laps" % len(laps))
 
     if args.analyze_data:
         print_lap_stats(laps)
@@ -88,3 +97,34 @@ if __name__ == '__main__':
 
     if args.analyze_videos:
         print_video_stats(videos)
+        sys.exit(0)
+
+    if not videos:
+        print "No Videos Found"
+        sys.exit(1)
+
+    if not laps:
+        print "No usable laps found"
+        sys.exit(1)
+
+
+    matched_videos = []
+    for video in videos:
+        if video.matched_laps:
+            matched_videos.append(video)
+
+    if not matched_videos:
+        print "No matching video/laps"
+        sys.exit(1)
+
+
+    if args.manual_offset:
+        for video in matched_videos:
+            video.calibrate_offset()
+
+
+    # For now, just create a new .mp4 with each lap
+    # we've discovered.
+    # Then we'll write small bits to each of those, and build from there
+    for video in matched_videos:
+        video.render_laps(args.outputdir or "/tmp/")

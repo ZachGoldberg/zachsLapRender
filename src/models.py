@@ -1,4 +1,5 @@
 import cv2
+import logging
 import os
 import pytz
 import settings
@@ -8,9 +9,12 @@ from dateutil import parser
 from datetime import datetime, timedelta
 from utils import creation_time
 
+logger = logging.getLogger(__name__)
+
 class Video(object):
     def __init__(self, filename):
         self.filename = filename
+        self.filebase = os.path.basename(filename)
         self.file_start_date = None
         self.last_modified_at = None
         self.last_access_at = None
@@ -22,6 +26,7 @@ class Video(object):
         self.height = None
         self.duration = None
         self.matched_laps = []
+        self.frame_offset = 0
 
         self._calc_times()
 
@@ -55,18 +60,133 @@ class Video(object):
         self.file_start_date = creation_time(self.filename)
         self.is_valid_video = True
 
+    def render_laps(self, outputdir):
+        for lapinfo in self.matched_laps:
+            # Load up the old video
+            oldcap = cv2.VideoCapture(self.filename)
+
+            newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
+                lapinfo["lap"].lapnum,
+                lapinfo["lap"].lap_time))
+
+            logger.info("Rendering %s from %s..." % (newfname, self.filebase))
+            # Create a new videowriter file
+            fourcc = cv2.cv.CV_FOURCC(*'MJPG')
+            out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
+
+            # Include the frame offset from calibration
+            start_frame = lapinfo['start_frame'] + self.frame_offset
+            end_frame = lapinfo['end_frame'] + self.frame_offset
+
+            total_frames = end_frame - start_frame
+
+            framenum = start_frame
+            frames_writen = 0
+            skipped = 0
+            logger.debug("Seeking to lap start at %s..." % framenum)
+            oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
+            while(oldcap.isOpened()):
+                framenum += 1
+                ret, frame = oldcap.read()
+
+                if framenum >= start_frame and framenum <= end_frame:
+                    out.write(frame)
+                    frames_writen += 1
+                    if frames_writen % 20 == 0:
+                        logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
+                else:
+                    skipped += 1
+                    if skipped % 100 == 0:
+                        logger.debug("Still seeking...")
+
+                if framenum > end_frame:
+                    break
+
+            logger.debug("Buttoning up video...")
+            oldcap.release()
+            out.release()
+            cv2.destroyAllWindows()
+
+    def calibrate_offset(self):
+        if not self.matched_laps:
+            return
+
+        cap = cv2.VideoCapture(self.filename)
+        lapinfo = self.matched_laps[0]
+        print "#" * 100
+        print "# MANUAL OFFSET CALIBRATION "
+        print "#" * 100
+        print """In a moment a window will appear which shows the first frame of the lap.  This frame may be offset from the actual start of the lap due to the difference in the block on your laptimer and your camera.  Use the arrow keys to move forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames).  Once you have the video at the first frame of the lap press enter."""
+        print "\nVideo File: %s" % self.filename
+        print "Video Start Time (Camera clock): %s" % self.start_time
+        print "First Lap Start Time (Laptimer Clock): %s" % lapinfo['lap'].start_time
+        print "First Frame of First Lap (calculated, assuming clocks are in sync): %s" % lapinfo['start_frame']
+        print "First Lap Start in Video-time (calculated, assuming clocks are in sync): %s" % lapinfo['start_seconds']
+        print "\nPress Enter to show the first frame and begin calibration for %s" % self.filebase
+
+        go = raw_input()
+
+        # Set initial frame to calculated start time
+        start_framenum = lapinfo['start_frame']
+        cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, start_framenum)
+
+        end_calibration = False
+        KEY_DELTA = {
+            65361: -1,
+            65363: 1,
+            65365: 300,
+            65366: -300
+        }
+
+        ENTER = 13
+
+        framenum = start_framenum
+
+        while(not end_calibration):
+            print "Offset: %s" % (framenum - start_framenum)
+            ret, frame = cap.read()
+
+            if ret:
+                cv2.imshow('frame', frame)
+                keypress = cv2.waitKey(-1)
+                if keypress == ENTER:
+                    self.frame_offset = framenum - start_framenum
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    return
+                else:
+                    movement = KEY_DELTA.get(keypress, 0)
+                    if movement == 1:
+                        framenum += 1
+                        continue
+
+                    elif movement != 0:
+                        framenum += movement
+                        cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
+
+
     def match_laps(self, laps):
         for lap in laps:
             self.match_lap(lap)
 
     def match_lap(self, lap):
-        print lap.start_time
         if self.start_time <= lap.start_time <= self.end_time:
-            start_frame = int(((lap.start_time - self.start_time).total_seconds()) / self.fps)
+            start_seconds = (lap.start_time - self.start_time).total_seconds()
+            start_frame = self.frame_offset + int((start_seconds) * self.fps)
 
+            """
+            print "Lap Start: %s" %  lap.start_time
+            print "Video Start: %s" % self.start_time
+            print "Seconds into video: %s" % start_seconds
+            print "Start Frame: %s" % start_frame
+            """
+
+            end_frame = start_frame + (lap.lap_time * self.fps)
             lap_info = {
                 "lap": lap,
-                "start_frame": start_frame
+                "start_seconds": start_seconds,
+                "start_frame": start_frame,
+                "end_frame": end_frame
             }
             self.matched_laps.append(lap_info)
 
@@ -88,13 +208,12 @@ class Video(object):
             return None
 
     def __str__(self):
-        return "%s (%sx%s) starting at %s, %s long, ending at %s with %s laps" % (
+        return "%s (%sx%s) starting at %s / %s long with %s laps" % (
             os.path.basename(self.filename),
             self.width,
             self.height,
             self.start_time,
             self.duration,
-            self.end_time,
             len(self.matched_laps)
         )
 
