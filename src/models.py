@@ -62,7 +62,6 @@ class Video(object):
     def match_lap(self, lap):
         print lap.start_time
         if self.start_time <= lap.start_time <= self.end_time:
-            import pdb; pdb.set_trace()
             start_frame = int(((lap.start_time - self.start_time).total_seconds()) / self.fps)
 
             lap_info = {
@@ -89,13 +88,14 @@ class Video(object):
             return None
 
     def __str__(self):
-        return "%s (%sx%s) starting at %s, %s long, ending at %s" % (
-            self.filename,
+        return "%s (%sx%s) starting at %s, %s long, ending at %s with %s laps" % (
+            os.path.basename(self.filename),
             self.width,
             self.height,
             self.start_time,
             self.duration,
-            self.end_time
+            self.end_time,
+            len(self.matched_laps)
         )
 
 class Day(object):
