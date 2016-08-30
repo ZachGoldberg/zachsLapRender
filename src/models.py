@@ -13,6 +13,8 @@ from utils import creation_time
 
 logger = logging.getLogger(__name__)
 
+speed_func = lambda x: x.speed_mph
+
 class Video(object):
     def __init__(self, filename):
         self.filename = filename
@@ -317,6 +319,7 @@ class Lap(object):
         self.lapnum = lapnum
         self.fixes = fixes
         self.date = None
+        self.speed_markers = []
         self._calc()
 
 
@@ -374,7 +377,30 @@ class Lap(object):
         if self.fixes and self.fixes[0].is_utc:
             utc = " UTC"
 
+        last_speed = None
+        speed_direction = None
+        last_fix = None
         for fix in self.fixes:
+
+            if last_speed is not None:
+                cur_speed_direction = None
+                if fix.speed_mph > last_speed:
+                    cur_speed_direction = 1
+                elif fix.speed_mph < last_speed:
+                    cur_speed_direction = -1
+
+                if (speed_direction is not None
+                    and cur_speed_direction is not None
+                    and cur_speed_direction != speed_direction):
+
+                    # We've found either a straight vmax or a corner vmin
+                    self.speed_markers.append({"speed": last_speed,
+                                               "direction": speed_direction,
+                                               "fix": last_fix
+                    })
+
+                speed_direction = cur_speed_direction
+
 
             if fix.lap_time <= min_time:
                 min_time = fix.lap_time
@@ -384,6 +410,8 @@ class Lap(object):
                 max_time = fix.lap_time
                 end_time = fix.wall_time
 
+            last_speed = fix.speed_mph
+            last_fix = fix
 
         self.lap_time = max_time
         self.start_time = parser.parse("%s %s %s" % (fix.date, start_time, utc))
