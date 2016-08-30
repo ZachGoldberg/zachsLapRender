@@ -64,7 +64,6 @@ class Video(object):
 
 
     def render_frame(self, frame, start_frame, framenum, lap):
-
         frames_in = framenum - start_frame
         seconds_total_in = frames_in / self.fps
         minutes_in = int(seconds_total_in / 60)
@@ -82,6 +81,18 @@ class Video(object):
         mph_txt = "%6.2f MPH" % mph
         cv2.putText(frame, mph_txt, (900, 100), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
+
+        # Render G force in numbers for now
+        lat_g = lap.get_lat_g_at_time(seconds_total_in)
+        lin_g = lap.get_lin_g_at_time(seconds_total_in)
+        lat_g_txt = "%6.2f Lateral Gs" % lat_g
+        lin_g_txt = "%6.2f Accel Gs" % lin_g
+        cv2.putText(frame, lat_g_txt, (200, 150), cv2.FONT_HERSHEY_PLAIN, 4,
+                    (255, 255, 255), 2, cv2.CV_AA)
+        cv2.putText(frame, lin_g_txt, (900, 150), cv2.FONT_HERSHEY_PLAIN, 4,
+                    (255, 255, 255), 2, cv2.CV_AA)
+
+
 
         return frame
 
@@ -310,11 +321,20 @@ class Lap(object):
 
 
     def get_mph_at_time(self, seconds):
+        return self.get_metric_at_time(lambda x: x.speed_mph, seconds)
+
+    def get_lat_g_at_time(self, seconds):
+        return self.get_metric_at_time(lambda x: x.lat_g, seconds)
+
+    def get_lin_g_at_time(self, seconds):
+        return self.get_metric_at_time(lambda x: x.lin_g, seconds)
+
+    def get_metric_at_time(self, metric, seconds):
         # This timestamp should be inbetween two fixes
         # Find which two, then "interpolate" MPH between them
 
         if seconds < self.fixes[0].lap_time:
-            return self.fixes[0].speed_mph
+            return metric(self.fixes[0])
 
         for i in xrange(len(self.fixes)):
             if i+1 > len(self.fixes):
@@ -326,21 +346,23 @@ class Lap(object):
                 total_delta = next_fix.lap_time - this_fix.lap_time
                 this_delta = seconds - this_fix.lap_time
                 percentage = this_delta / total_delta
-                speed_delta = this_fix.speed_mph - next_fix.speed_mph
-                speed_delta_mod = -1 * speed_delta * percentage
-                speed = this_fix.speed_mph + speed_delta_mod
-
-                #print this_fix.lap_time, this_fix.speed_mph
-                #print next_fix.lap_time, next_fix.speed_mph
-                #print total_delta
-                #print seconds
-                #print this_delta, percentage
-                #print speed_delta, speed_delta_mod, speed
-                #print "-" * 100
-                return speed
+                metric_delta = metric(this_fix) - metric(next_fix)
+                metric_delta_mod = -1 * metric_delta * percentage
+                metric_out = metric(this_fix) + metric_delta_mod
+                """
+                print "-" * 100
+                print this_fix.lap_time, metric(this_fix)
+                print next_fix.lap_time, metric(next_fix)
+                print total_delta
+                print seconds
+                print this_delta, percentage
+                print metric_delta, metric_delta_mod, metric_out
+                print "-" * 100
+                """
+                return metric_out
 
         # Erg, just use the last one?
-        return fixes[-1].speed_mph
+        return metric(fixes[-1])
 
     def _calc(self):
         # find lap length
