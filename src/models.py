@@ -87,14 +87,56 @@ class Video(object):
         # Render G force in numbers for now
         lat_g = lap.get_lat_g_at_time(seconds_total_in)
         lin_g = lap.get_lin_g_at_time(seconds_total_in)
-        lat_g_txt = "%6.2f Lateral Gs" % lat_g
-        lin_g_txt = "%6.2f Accel Gs" % lin_g
+        lat_g_txt = "Lateral Gs: %6.2f" % lat_g
+        lin_g_txt = "Accel Gs: %6.2f" % lin_g
         cv2.putText(frame, lat_g_txt, (200, 150), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
+
         cv2.putText(frame, lin_g_txt, (900, 150), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
 
 
+
+        # See if we have any vmin/vmax annotations
+        speedinfo = lap.get_nearest_speed_direction_change(
+            seconds_total_in)
+
+        # Config, ish
+        # How long to show a speed notice for
+        SPEED_APEX_DURATION = 3
+        # How long should the fade out be
+        SPEED_APEX_FADE = 1
+
+
+        start_fade = SPEED_APEX_DURATION - SPEED_APEX_FADE
+
+        if speedinfo:
+            seconds_since_speed = seconds_total_in - speedinfo['seconds']
+            if seconds_since_speed < SPEED_APEX_DURATION:
+                text = ""
+                if speedinfo['direction'] == 1:
+                    text = "Straight %6.2f mph" % speedinfo['speed']
+                else:
+                    text= "Corner %6.2f mph" % speedinfo['speed']
+
+                if seconds_since_speed < start_fade:
+                    cv2.putText(frame, text, (200, 200), cv2.FONT_HERSHEY_PLAIN, 4,
+                                (255, 255, 255), 2, cv2.CV_AA)
+                else:
+                    # Do some fun alpha fading
+                    time_since_fade_start = seconds_since_speed - start_fade
+
+                    alpha = 1 - (time_since_fade_start / SPEED_APEX_FADE)
+                    beta = 1 - alpha
+                    gamma = 0
+                    overlay = frame.copy()
+                    cv2.putText(overlay, text, (200, 200), cv2.FONT_HERSHEY_PLAIN, 4,
+                                (255, 255, 255), 2, cv2.CV_AA)
+                    cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
+
+
+        cv2.imshow('frame', frame)
+        keypress = cv2.waitKey(1)
 
         return frame
 
@@ -367,6 +409,20 @@ class Lap(object):
         # Erg, just use the last one?
         return metric(fixes[-1])
 
+    def get_nearest_speed_direction_change(self, seconds):
+        # Find the closest speed change that is _behind_ this fix
+
+        # Assumes speed_markers are sorted in time
+        reverse_markers = [m for m in self.speed_markers]
+        reverse_markers.reverse()
+        for marker in reverse_markers:
+            this_seconds = marker['seconds']
+            if this_seconds > seconds:
+                continue
+
+            # else this_seconds < seconds
+            return marker
+
     def _calc(self):
         # find lap length
         max_time = 0
@@ -381,7 +437,6 @@ class Lap(object):
         speed_direction = None
         last_fix = None
         for fix in self.fixes:
-
             if last_speed is not None:
                 cur_speed_direction = None
                 if fix.speed_mph > last_speed:
@@ -396,7 +451,8 @@ class Lap(object):
                     # We've found either a straight vmax or a corner vmin
                     self.speed_markers.append({"speed": last_speed,
                                                "direction": speed_direction,
-                                               "fix": last_fix
+                                               "fix": last_fix,
+                                               "seconds": last_fix.lap_time
                     })
 
                 speed_direction = cur_speed_direction
@@ -475,7 +531,6 @@ class Fix(object):
 
     def __init__(self, is_utc=False):
         self.is_utc = is_utc
-
 
     def setattr(self, attr, val):
         if attr not in self.ATTRS:
