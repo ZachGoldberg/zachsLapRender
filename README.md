@@ -24,6 +24,6 @@ TODO:
  - Options for MPH vs KPH
  - Show zachsLapRender watermark
  - Show name of course of the data
- - Minimum corner speeds... hrmm
+ - Show maximum corner Gs as well
 
 Google Client ID: 767886164356-3sp661b4gk9o6kmdn06pqqrf708p5c3b.apps.googleusercontent.com

@@ -115,9 +115,9 @@ class Video(object):
             if seconds_since_speed < SPEED_APEX_DURATION:
                 text = ""
                 if speedinfo['direction'] == 1:
-                    text = "Straight %6.2f mph" % speedinfo['speed']
+                    text = "Straight %6.2f mph" % speedinfo['speed_mph']
                 else:
-                    text= "Corner %6.2f mph" % speedinfo['speed']
+                    text= "Corner %6.2f mph" % speedinfo['speed_mph']
 
                 if seconds_since_speed < start_fade:
                     cv2.putText(frame, text, (200, 200), cv2.FONT_HERSHEY_PLAIN, 4,
@@ -362,6 +362,8 @@ class Lap(object):
         self.fixes = fixes
         self.date = None
         self.speed_markers = []
+        self.lat_g_markers = []
+        self.lin_g_markers = []
         self._calc()
 
 
@@ -433,29 +435,46 @@ class Lap(object):
         if self.fixes and self.fixes[0].is_utc:
             utc = " UTC"
 
-        last_speed = None
-        speed_direction = None
-        last_fix = None
+
+        # Peek speed / gforce variables
+        peek_state = {}
+
         for fix in self.fixes:
-            if last_speed is not None:
-                cur_speed_direction = None
-                if fix.speed_mph > last_speed:
-                    cur_speed_direction = 1
-                elif fix.speed_mph < last_speed:
-                    cur_speed_direction = -1
+            def peek_metric_calc(state, metric_name, storage_name):
+                last_metric_name = "last_%s" % metric_name
+                last_direction_name = "last_%s_direction" % metric_name
+                last_metric = state.get(last_metric_name, None)
+                last_direction = state.get(last_direction_name, None)
+                last_fix = state.get('last_fix', None)
 
-                if (speed_direction is not None
-                    and cur_speed_direction is not None
-                    and cur_speed_direction != speed_direction):
+                cur_metric = getattr(fix, metric_name)
+                cur_direction = None
 
-                    # We've found either a straight vmax or a corner vmin
-                    self.speed_markers.append({"speed": last_speed,
-                                               "direction": speed_direction,
-                                               "fix": last_fix,
-                                               "seconds": last_fix.lap_time
-                    })
+                if last_metric is not None:
+                    if cur_metric > last_metric:
+                        cur_direction = 1
+                    elif cur_metric < last_metric:
+                        cur_direction = -1
 
-                speed_direction = cur_speed_direction
+                    if (last_direction is not None
+                        and cur_direction is not None
+                        and cur_direction != last_direction):
+
+                        # We've found either a straight vmax or a corner vmin
+                        getattr(self, storage_name).append(
+                            {metric_name: last_metric,
+                             "direction": last_direction,
+                             "fix": last_fix,
+                             "seconds": last_fix.lap_time
+                            })
+
+                state[last_direction_name] = cur_direction
+                state[last_metric_name] = cur_metric
+
+            if 'last_fix' in peek_state:
+                peek_metric_calc(peek_state, 'speed_mph', 'speed_markers')
+                peek_metric_calc(peek_state, 'lat_g', 'lat_g_markers')
+                peek_metric_calc(peek_state, 'lin_g', 'lin_g_markers')
 
 
             if fix.lap_time <= min_time:
@@ -466,8 +485,7 @@ class Lap(object):
                 max_time = fix.lap_time
                 end_time = fix.wall_time
 
-            last_speed = fix.speed_mph
-            last_fix = fix
+            peek_state['last_fix'] = fix
 
         self.lap_time = max_time
         self.start_time = parser.parse("%s %s %s" % (fix.date, start_time, utc))
