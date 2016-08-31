@@ -157,7 +157,6 @@ class Video(object):
                                        METRIC_APEX_FADE, (200, 200))
 
         if (cornerinfo and
-            cornerinfo['direction'] == 1 and
             abs(cornerinfo['metric']) > MIN_APEX_CORNER_G):
             render_metric_direction_change(cornerinfo, corner_text, METRIC_APEX_DURATION,
                                            METRIC_APEX_FADE, (200, 250))
