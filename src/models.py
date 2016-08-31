@@ -30,7 +30,7 @@ class Video(object):
         self.height = None
         self.duration = None
         self.matched_laps = []
-        self.frame_offset = 0
+        self.frame_offset = 8595
 
         self._calc_times()
 
@@ -101,44 +101,124 @@ class Video(object):
         speedinfo = lap.get_nearest_speed_direction_change(
             seconds_total_in)
 
-        # Config, ish
+        brakeinfo = lap.get_nearest_lin_g_direction_change(seconds_total_in)
+        cornerinfo = lap.get_nearest_lat_g_direction_change(seconds_total_in)
+
         # How long to show a speed notice for
-        SPEED_APEX_DURATION = 3
+        METRIC_APEX_DURATION = 3
+
         # How long should the fade out be
-        SPEED_APEX_FADE = 1
+        METRIC_APEX_FADE = 1
+
+        # Minimum cornering Gs that will trigger a "max corner g" annotation
+        MIN_APEX_CORNER_G = 0.6
+
+        # Minimum braking Gs that will trigger a "max break g" annotation
+        MIN_BRAKE_G = -0.3
+
+        start_fade = METRIC_APEX_DURATION - METRIC_APEX_FADE
+
+        def render_metric_direction_change(
+                metricinfo, metric_text_func, metric_duration, metric_fade, render_pos):
+
+            if metricinfo:
+                seconds_since_metric = seconds_total_in - metricinfo['seconds']
+                if seconds_since_metric < METRIC_APEX_DURATION:
+                    text = metric_text_func(metricinfo)
+                    if seconds_since_metric < start_fade:
+                        cv2.putText(frame, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
+                                    (255, 255, 255), 2, cv2.CV_AA)
+                    else:
+                        # Do some fun alpha fading
+                        time_since_fade_start = seconds_since_metric - start_fade
+
+                        alpha = 1 - (time_since_fade_start / METRIC_APEX_FADE)
+                        beta = 1 - alpha
+                        gamma = 0
+                        overlay = frame.copy()
+                        cv2.putText(overlay, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
+                                    (255, 255, 255), 2, cv2.CV_AA)
+                        cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
 
-        start_fade = SPEED_APEX_DURATION - SPEED_APEX_FADE
+        def speed_text(metricinfo):
+            if metricinfo['direction'] == 1:
+                return "Straight %6.2f mph" % metricinfo['metric']
+            else:
+                return "Corner %6.2f mph" % metricinfo['metric']
 
-        if speedinfo:
-            seconds_since_speed = seconds_total_in - speedinfo['seconds']
-            if seconds_since_speed < SPEED_APEX_DURATION:
-                text = ""
-                if speedinfo['direction'] == 1:
-                    text = "Straight %6.2f mph" % speedinfo['speed_mph']
-                else:
-                    text= "Corner %6.2f mph" % speedinfo['speed_mph']
+        def corner_text(metricinfo):
+            return "Max Corner Gs:  %4.2f" % metricinfo['metric']
 
-                if seconds_since_speed < start_fade:
-                    cv2.putText(frame, text, (200, 200), cv2.FONT_HERSHEY_PLAIN, 4,
-                                (255, 255, 255), 2, cv2.CV_AA)
-                else:
-                    # Do some fun alpha fading
-                    time_since_fade_start = seconds_since_speed - start_fade
+        def brake_text(metricinfo):
+            return "Max Braking Gs:  %4.2f" % metricinfo['metric']
 
-                    alpha = 1 - (time_since_fade_start / SPEED_APEX_FADE)
-                    beta = 1 - alpha
-                    gamma = 0
-                    overlay = frame.copy()
-                    cv2.putText(overlay, text, (200, 200), cv2.FONT_HERSHEY_PLAIN, 4,
-                                (255, 255, 255), 2, cv2.CV_AA)
-                    cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
+        render_metric_direction_change(speedinfo, speed_text, METRIC_APEX_DURATION,
+                                       METRIC_APEX_FADE, (200, 200))
 
+        if (cornerinfo and
+            cornerinfo['direction'] == 1 and
+            abs(cornerinfo['metric']) > MIN_APEX_CORNER_G):
+            render_metric_direction_change(cornerinfo, corner_text, METRIC_APEX_DURATION,
+                                           METRIC_APEX_FADE, (200, 250))
+
+
+        if (brakeinfo and
+            brakeinfo['direction'] == -1 and
+            brakeinfo['metric'] < MIN_BRAKE_G):
+            render_metric_direction_change(brakeinfo, brake_text, METRIC_APEX_DURATION,
+                                           METRIC_APEX_FADE, (200, 300))
+
+
+        self.draw_map(frame, start_frame, framenum, lap)
 
         cv2.imshow('frame', frame)
         keypress = cv2.waitKey(1)
 
         return frame
+
+    def draw_map(self, frame, start_frame, framenum, lap):
+        # Fuck me.
+        # Step 1, compute the GPS bounding box
+        bounds = lap.get_gps_bounds()
+        lat_range = bounds[1] - bounds[0]
+        long_range = bounds[3] - bounds[2]
+
+        gps_origin = (
+            # min_lat + half lat range = center of lat
+            (bounds[0] + (lat_range / 2)),
+            # min_long + half long range = center of long
+            (bounds[2] + (long_range / 2))
+        )
+
+
+        map_width = 300
+        map_height = 300
+
+        lat_scale_factor = map_width / lat_range
+        long_scale_factor = map_height / long_range
+
+        map_orig = (self.width - (map_width / 2) - 50,
+                    150 + (map_height / 2))
+
+        def get_point(fix):
+            lat = fix.lat
+            lon = fix.long
+
+            x = gps_origin[0] + ((lat - gps_origin[0]) * lat_scale_factor)
+            y = gps_origin[1] + ((lon - gps_origin[1]) * long_scale_factor)
+
+            x += map_orig[0]
+            y += map_orig[1]
+
+            return (int(x), int(y))
+
+        last_fix = lap.fixes[0]
+        for fix in lap.fixes[1:]:
+            cv2.line(frame, get_point(last_fix), get_point(fix), (255,255,255), 3, cv2.CV_AA)
+            last_fix = fix
+
+
 
     def render_laps(self, outputdir):
         lapvideos = []
@@ -367,6 +447,28 @@ class Lap(object):
         self._calc()
 
 
+    def get_gps_bounds(self):
+        min_lat = 999
+        min_long = 999
+
+        max_lat = -999
+        max_long = -999
+        for fix in self.fixes:
+            if fix.lat < min_lat:
+                min_lat = fix.lat
+
+            if fix.lat > max_lat:
+                max_lat = fix.lat
+
+            if fix.long < min_long:
+                min_long = fix.long
+
+            if fix.long > max_long:
+                max_long = fix.long
+
+        return (min_lat, max_lat, min_long, max_long)
+
+
     def get_mph_at_time(self, seconds):
         return self.get_metric_at_time(lambda x: x.speed_mph, seconds)
 
@@ -411,11 +513,21 @@ class Lap(object):
         # Erg, just use the last one?
         return metric(fixes[-1])
 
+
     def get_nearest_speed_direction_change(self, seconds):
+        return self.get_nearest_metric_direction_change(self.speed_markers, seconds)
+
+    def get_nearest_lin_g_direction_change(self, seconds):
+        return self.get_nearest_metric_direction_change(self.lin_g_markers, seconds)
+
+    def get_nearest_lat_g_direction_change(self, seconds):
+        return self.get_nearest_metric_direction_change(self.lat_g_markers, seconds)
+
+    def get_nearest_metric_direction_change(self, markers, seconds):
         # Find the closest speed change that is _behind_ this fix
 
         # Assumes speed_markers are sorted in time
-        reverse_markers = [m for m in self.speed_markers]
+        reverse_markers = [m for m in markers]
         reverse_markers.reverse()
         for marker in reverse_markers:
             this_seconds = marker['seconds']
@@ -424,6 +536,8 @@ class Lap(object):
 
             # else this_seconds < seconds
             return marker
+
+        return None
 
     def _calc(self):
         # find lap length
@@ -455,6 +569,8 @@ class Lap(object):
                         cur_direction = 1
                     elif cur_metric < last_metric:
                         cur_direction = -1
+                    else:
+                        cur_direction = last_direction
 
                     if (last_direction is not None
                         and cur_direction is not None
@@ -462,7 +578,7 @@ class Lap(object):
 
                         # We've found either a straight vmax or a corner vmin
                         getattr(self, storage_name).append(
-                            {metric_name: last_metric,
+                            {"metric": last_metric,
                              "direction": last_direction,
                              "fix": last_fix,
                              "seconds": last_fix.lap_time
