@@ -201,9 +201,11 @@ class Video(object):
         map_orig = (self.width - (map_width / 2) - 50,
                     150 + (map_height / 2))
 
-        def get_point(fix):
-            lat = fix.lat
-            lon = fix.long
+        def get_point(fix=None, lat=None, lon=None):
+            if not lat and fix:
+                lat = fix.lat
+            if not lon and fix:
+                lon = fix.long
 
             x = gps_origin[0] + ((lat - gps_origin[0]) * lat_scale_factor)
             y = gps_origin[1] + ((lon - gps_origin[1]) * long_scale_factor)
@@ -217,6 +219,12 @@ class Video(object):
         for fix in lap.fixes[1:]:
             cv2.line(frame, get_point(last_fix), get_point(fix), (255,255,255), 3, cv2.CV_AA)
             last_fix = fix
+
+        frames_in = framenum - start_frame
+        seconds_total_in = frames_in / self.fps
+        # Now let's draw us!
+        (lat, lon) = lap.get_gps_at_time(seconds_total_in)
+        cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)
 
 
 
@@ -477,6 +485,10 @@ class Lap(object):
 
     def get_lin_g_at_time(self, seconds):
         return self.get_metric_at_time(lambda x: x.lin_g, seconds)
+
+    def get_gps_at_time(self, seconds):
+        return (self.get_metric_at_time(lambda x: x.lat, seconds),
+                self.get_metric_at_time(lambda x: x.long, seconds))
 
     def get_metric_at_time(self, metric, seconds):
         # This timestamp should be inbetween two fixes
