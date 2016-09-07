@@ -89,7 +89,7 @@ class Video(object):
                     cap = cv2.VideoCapture(filename)
                     fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
                     frame_count = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
-                    self.duration += timedelta(seconds=self.frame_count / self.fps)
+                    self.duration += timedelta(seconds=frame_count / fps)
                     cap.release()
 
         except:
