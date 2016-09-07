@@ -9,7 +9,7 @@ import wave
 
 from dateutil import parser
 from datetime import datetime, timedelta
-from utils import creation_time
+from utils import creation_time, within_x_sec, gopro_video_names_in_order
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ speed_func = lambda x: x.speed_mph
 
 class Video(object):
     def __init__(self, filename):
-        self.filename = filename
-        self.filebase = os.path.basename(filename)
+        self.filenames = [filename]
+        self.filebase = os.path.basename(filename[0])
         self.file_start_date = None
         self.last_modified_at = None
         self.last_access_at = None
@@ -34,16 +34,41 @@ class Video(object):
 
         self._calc_times()
 
+    def find_video_predecessor(self, videos):
+        for video in videos:
+            if (within_x_sec(3, self.end_time, video.start_time) or
+                within_x_sec(3, self.start_time, video.end_time) or
+                gopro_video_names_in_order(self.filenames, video.filenames)
+            ):
+                # Figure out which has earliest start, append all videos from newer one,
+                # resort filenames by start time / filename, redo all internal calculations
+                old = self
+                new = video
+                if self.start_time > video.start_time:
+                    old = video
+                    new = self
+
+                # TODO: Use basenames when sorting?
+                old.filenames.extend(new.filenames)
+                old.filenames.sort()
+                old._calc_times()
+                return old, new
+
+        return None, None
+
+
+    def sort_filenames(self):
+        pass
 
     def _calc_times(self):
         # Open the file, find timestmps etc.
-        res = os.stat(self.filename)
+        res = os.stat(self.filenames[0])
         self.last_modified_at = datetime.fromtimestamp(res.st_mtime)
         self.last_access_at = datetime.fromtimestamp(res.st_atime)
         self.created_at =  datetime.fromtimestamp(res.st_ctime)
 
         # Don't bother with obviously not video files
-        _, ext = os.path.splitext(self.filename)
+        _, ext = os.path.splitext(self.filenames[0])
         if ext.lower() not in settings.VALID_VIDEO_EXTENSIONS:
             return
 
@@ -51,17 +76,26 @@ class Video(object):
         # Verify that it's a valid video that cv2 can inspect,
         # record some video metadata whilst its open
         try:
-            cap = cv2.VideoCapture(self.filename)
+            cap = cv2.VideoCapture(self.filenames[0])
             self.fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
             self.frame_count = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
             self.duration = timedelta(seconds=self.frame_count / self.fps)
             self.width  = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
             self.height = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
             cap.release()
+
+            if len(self.filenames) > 1:
+                for filename in self.filenames[1:]:
+                    cap = cv2.VideoCapture(filename)
+                    fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
+                    frame_count = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+                    self.duration += timedelta(seconds=self.frame_count / self.fps)
+                    cap.release()
+
         except:
             return
 
-        self.file_start_date = creation_time(self.filename)
+        self.file_start_date = creation_time(self.filenames[0])
         self.is_valid_video = True
 
 
@@ -232,7 +266,7 @@ class Video(object):
 
         for lapinfo in self.matched_laps:
             # Load up the old video
-            oldcap = cv2.VideoCapture(self.filename)
+            oldcap = cv2.VideoCapture(self.filenames)
 
             newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
                 lapinfo["lap"].lapnum,
@@ -291,7 +325,7 @@ class Video(object):
             audiofile = "/tmp/zachsaudio.wav"
             newaudiofile = "/tmp/zachaudioout.wav"
             subprocess.call(
-                "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (self.filename, audiofile),
+                "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (self.filenames, audiofile),
                 shell=True)
 
             old_audio = wave.open(audiofile, 'rb')
@@ -331,13 +365,13 @@ class Video(object):
         if not self.matched_laps:
             return
 
-        cap = cv2.VideoCapture(self.filename)
+        cap = cv2.VideoCapture(self.filenames)
         lapinfo = self.matched_laps[0]
         print "#" * 100
         print "# MANUAL OFFSET CALIBRATION "
         print "#" * 100
         print """In a moment a window will appear which shows the first frame of the lap.  This frame may be offset from the actual start of the lap due to the difference in the block on your laptimer and your camera.  Use the arrow keys to move forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames).  Once you have the video at the first frame of the lap press enter."""
-        print "\nVideo File: %s" % self.filename
+        print "\nVideo File: %s" % self.filenames
         print "Video Start Time (Camera clock): %s" % self.start_time
         print "First Lap Start Time (Laptimer Clock): %s" % lapinfo['lap'].start_time
         print "First Frame of First Lap (calculated, assuming clocks are in sync): %s" % lapinfo['start_frame']
@@ -386,6 +420,8 @@ class Video(object):
 
 
     def match_laps(self, laps):
+        self.matched_laps = []
+
         for lap in laps:
             self.match_lap(lap)
 
@@ -429,7 +465,7 @@ class Video(object):
 
     def __str__(self):
         return "%s (%sx%s) starting at %s / %s long with %s laps" % (
-            os.path.basename(self.filename),
+            ",".join([os.path.basename(fn) for fn in self.filenames]),
             self.width,
             self.height,
             self.start_time,

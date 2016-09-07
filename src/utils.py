@@ -3,6 +3,8 @@ import os
 import subprocess
 import tzlocal
 
+
+
 from datetime import datetime
 from dateutil import parser
 
@@ -28,6 +30,18 @@ def creation_time(filename):
     except:
         return None
 
+
+def gopro_video_names_in_order(names1, names2):
+    if (("GOPR" in names1[0] or "GP01" in names2[0]) and
+        ("GOPR" in names2[0] or "GP01" in names2[0])):
+        return names1[0][-6:-4] == names2[0][-6:-4]
+
+    return False
+
+def within_x_sec(sec, dt1, dt2):
+    return abs((dt1 - dt2).total_seconds()) < sec
+
+
 def collect_videos(dirname, laps=None):
     if not laps:
         laps = []
@@ -46,8 +60,19 @@ def collect_videos(dirname, laps=None):
 
         video = Video(os.path.join(dirname, fname))
         if video.is_valid():
+            # Gopro splits up videos every 12 mins, so join them together as far as data
+            # processing is concerned
+            prev_video, new_video = video.find_video_predecessor(videos)
+
+            if not prev_video:
+                videos.append(video)
+            else:
+                if prev_video == video:
+                    videos.remove(new_video)
+                    videos.append(prev_video)
+                    video = prev_video
+
             video.match_laps(laps)
-            videos.append(video)
             logging.info("Found a video: %s" % video)
         else:
             logging.debug("%s is not a video" % video)
