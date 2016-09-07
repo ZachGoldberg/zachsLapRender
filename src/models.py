@@ -34,6 +34,9 @@ class Video(object):
 
         self._calc_times()
 
+    def file_basenames(self):
+        return ",".join([os.path.basename(fn) for fn in self.filenames])
+
     def find_video_predecessor(self, videos):
         for video in videos:
             if (within_x_sec(3, self.end_time, video.start_time) or
@@ -48,6 +51,7 @@ class Video(object):
                     old = video
                     new = self
 
+                logger.debug("Merging %s and %s" % (old.file_basenames(), new.file_basenames()))
                 # TODO: Use basenames when sorting?
                 old.filenames.extend(new.filenames)
                 old.filenames.sort()
@@ -465,7 +469,7 @@ class Video(object):
 
     def __str__(self):
         return "%s (%sx%s) starting at %s / %s long with %s laps" % (
-            ",".join([os.path.basename(fn) for fn in self.filenames]),
+            self.file_basenames(),
             self.width,
             self.height,
             self.start_time,
