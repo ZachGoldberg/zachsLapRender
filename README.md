@@ -28,5 +28,6 @@ TODO:
  - Show predictive laptime throughout the lap, compared to best of the day
  - Show splits if they exist
  - Show lap number
+ - Account for gap between chapters in gopro videos (~1 second) during rendering.  Gopro is fucking awful
 
 Google Client ID: 767886164356-3sp661b4gk9o6kmdn06pqqrf708p5c3b.apps.googleusercontent.com
