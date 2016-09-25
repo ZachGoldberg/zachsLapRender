@@ -64,6 +64,11 @@ run_test_real_video() {
     run_zachs  -vd="/home/zgoldberg/Videos/RacingVideos/Streets8142016/" --input-data-file=samples/LapTimerGPSRecDB.csv $@
 }
 
+
+run_test_real_video2() {
+    run_zachs  -vd="/home/zgoldberg/Videos/RacingVideos/JuliaStreets932016/" --input-data-file=922016Laps.csv -vv $@
+}
+
 run_install_completion () {
     echo "[ -x $PWD/run ] && eval \"\`$PWD/run completion\`\"" >> ~/.bashrc
 
