@@ -1,5 +1,6 @@
 import cv2
 import logging
+import math
 import os
 import pytz
 import settings
@@ -266,10 +267,14 @@ class Video(object):
 
     def next_sync_event(self, frames_in):
         seconds_in = frames_in / self.fps
+
+        print "-" * 50
         for lapinfo in self.matched_laps:
             lap = lapinfo['lap']
-            lap_seconds_in = lapinfo['start_seconds'] - seconds_in
-            if lap_seconds_in < 0:
+            lap_seconds_in = seconds_in - lapinfo['start_seconds']
+            print "Lap Start: %s, seconds in: %s" % (lapinfo['start_seconds'], seconds_in)
+            print "Lap Seconds In: %s" % lap_seconds_in
+            if lap_seconds_in < -1 or frames_in > lapinfo['end_frame']:
                 continue
 
             speedinfo = lap.get_nearest_speed_direction_change(
@@ -279,11 +284,46 @@ class Video(object):
             cornerinfo = lap.get_nearest_lat_g_direction_change(lap_seconds_in, True) or {}
 
             lowest_time = min([speedinfo.get('seconds'), brakeinfo.get('seconds'), cornerinfo.get('seconds')])
-            return frames_in + (lowest_time * self.fps)
+            print lapinfo
+            print speedinfo, brakeinfo, cornerinfo
+            print lowest_time
+            new_frame = lapinfo['start_frame'] + math.ceil(lowest_time * self.fps)
+
+            print "Returning %s" % new_frame
+            if abs(new_frame - frames_in) == 0:
+                return new_frame + 1
+
+            return new_frame
 
         return frames_in
 
     def prev_sync_event(self, frames_in):
+        seconds_in = frames_in / self.fps
+        print "-" * 50
+
+
+        for lapinfo in self.matched_laps:
+            lap = lapinfo['lap']
+            lap_seconds_in = seconds_in - lapinfo['start_seconds']
+            print "Lap Start: %s, seconds in: %s" % (lapinfo['start_seconds'], seconds_in)
+            print lap_seconds_in
+            if lap_seconds_in < -1 or frames_in > lapinfo['end_frame']:
+                continue
+
+            speedinfo = lap.get_nearest_speed_direction_change(
+                lap_seconds_in) or {}
+
+            brakeinfo = lap.get_nearest_lin_g_direction_change(lap_seconds_in) or {}
+            cornerinfo = lap.get_nearest_lat_g_direction_change(lap_seconds_in) or {}
+
+            highest_time = max([speedinfo.get('seconds'), brakeinfo.get('seconds'), cornerinfo.get('seconds')])
+            print lapinfo
+            print seconds_in
+            print lap_seconds_in
+            print speedinfo, brakeinfo, cornerinfo
+            print highest_time
+            return lapinfo['start_frame'] + int(highest_time * self.fps)
+
         return frames_in
 
     def render_laps(self, outputdir):
@@ -425,9 +465,9 @@ class Video(object):
         W_KEY = 119
         Q_KEY = 113
         framenum = start_framenum
-
+        offset = 0
         while(not end_calibration):
-            print "Current Frame: %s, sync offset: %s" % (framenum, (framenum - start_framenum))
+            print "Current Frame: %s, sync offset: %s" % (framenum, offset)
 
             ret, frame = cap.read()
 
@@ -440,7 +480,7 @@ class Video(object):
                 movement = 0
                 print keypress
                 if keypress == ENTER:
-                    self.frame_offset = framenum - start_framenum
+                    self.frame_offset = offset
                     cap.release()
                     cv2.destroyAllWindows()
                     return
@@ -450,12 +490,13 @@ class Video(object):
                     movement = self.prev_sync_event(framenum) - framenum
                 else:
                     movement = KEY_DELTA.get(keypress, 0)
-
+                    offset += movement
                 if movement == 1:
                     framenum += 1
                     continue
 
                 elif movement != 0:
+                    print "Jumping by %s frames..." % movement
                     framenum += movement
                     cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
 
@@ -574,7 +615,7 @@ class Lap(object):
             return metric(self.fixes[0])
 
         for i in xrange(len(self.fixes)):
-            if i+1 > len(self.fixes):
+            if i + 1 >= len(self.fixes):
                 break
             this_fix = self.fixes[i]
             next_fix = self.fixes[i+1]
@@ -599,7 +640,7 @@ class Lap(object):
                 return metric_out
 
         # Erg, just use the last one?
-        return metric(fixes[-1])
+        return metric(self.fixes[-1])
 
 
     def get_nearest_speed_direction_change(self, seconds, look_forward=False):
