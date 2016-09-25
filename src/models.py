@@ -264,13 +264,34 @@ class Video(object):
         cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)
 
 
+    def next_sync_event(self, frames_in):
+        seconds_in = frames_in / self.fps
+        for lapinfo in self.matched_laps:
+            lap = lapinfo['lap']
+            lap_seconds_in = lapinfo['start_seconds'] - seconds_in
+            if lap_seconds_in < 0:
+                continue
+
+            speedinfo = lap.get_nearest_speed_direction_change(
+                lap_seconds_in, True) or {}
+
+            brakeinfo = lap.get_nearest_lin_g_direction_change(lap_seconds_in, True) or {}
+            cornerinfo = lap.get_nearest_lat_g_direction_change(lap_seconds_in, True) or {}
+
+            lowest_time = min([speedinfo.get('seconds'), brakeinfo.get('seconds'), cornerinfo.get('seconds')])
+            return frames_in + (lowest_time * self.fps)
+
+        return frames_in
+
+    def prev_sync_event(self, frames_in):
+        return frames_in
 
     def render_laps(self, outputdir):
         lapvideos = []
 
         for lapinfo in self.matched_laps:
             # Load up the old video
-            oldcap = cv2.VideoCapture(self.filenames)
+            oldcap = cv2.VideoCapture(self.filenames[0])
 
             newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
                 lapinfo["lap"].lapnum,
@@ -369,13 +390,17 @@ class Video(object):
         if not self.matched_laps:
             return
 
-        cap = cv2.VideoCapture(self.filenames)
+        cap = cv2.VideoCapture(self.filenames[0])
         lapinfo = self.matched_laps[0]
         print "#" * 100
         print "# MANUAL OFFSET CALIBRATION "
         print "#" * 100
-        print """In a moment a window will appear which shows the first frame of the lap.  This frame may be offset from the actual start of the lap due to the difference in the block on your laptimer and your camera.  Use the arrow keys to move forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames).  Once you have the video at the first frame of the lap press enter."""
-        print "\nVideo File: %s" % self.filenames
+        print """In a moment a window will appear which shows the first frame of the lap.  This frame may be offset from the actual start of the lap due to the difference in the block on your laptimer and your camera."""
+        print "\nUse the arrow keys to move the video sync forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames)."
+        print "\nPress w to advance to the first frame of the next major telemtry change or visual sync point (start/finish, braking zone etc.), or q to go to the previous."
+        print "\nThe sync process starts with start/finish.  It is highly recommended to press w and q a few times to confirm that the sync lines up consistently in each video file and use the arrow keys to refine until you feel it is frame-perfect."
+        print "\nPress Enter when finished syncing\n"
+        print "\nVideo File: %s" % self.filenames[0]
         print "Video Start Time (Camera clock): %s" % self.start_time
         print "First Lap Start Time (Laptimer Clock): %s" % lapinfo['lap'].start_time
         print "First Frame of First Lap (calculated, assuming clocks are in sync): %s" % lapinfo['start_frame']
@@ -397,30 +422,42 @@ class Video(object):
         }
 
         ENTER = 13
-
+        W_KEY = 119
+        Q_KEY = 113
         framenum = start_framenum
 
         while(not end_calibration):
-            print "Offset: %s" % (framenum - start_framenum)
+            print "Current Frame: %s, sync offset: %s" % (framenum, (framenum - start_framenum))
+
             ret, frame = cap.read()
 
             if ret:
+                lapinfo = self.matched_laps[0]
+                lap_start_framenum = lapinfo['start_frame']
+                frame = self.render_frame(frame, lap_start_framenum, framenum, lapinfo['lap'])
                 cv2.imshow('frame', frame)
                 keypress = cv2.waitKey(-1)
+                movement = 0
+                print keypress
                 if keypress == ENTER:
                     self.frame_offset = framenum - start_framenum
                     cap.release()
                     cv2.destroyAllWindows()
                     return
+                elif keypress == W_KEY:
+                    movement = self.next_sync_event(framenum) - framenum
+                elif keypress == Q_KEY:
+                    movement = self.prev_sync_event(framenum) - framenum
                 else:
                     movement = KEY_DELTA.get(keypress, 0)
-                    if movement == 1:
-                        framenum += 1
-                        continue
 
-                    elif movement != 0:
-                        framenum += movement
-                        cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
+                if movement == 1:
+                    framenum += 1
+                    continue
+
+                elif movement != 0:
+                    framenum += movement
+                    cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
 
 
     def match_laps(self, laps):
@@ -565,28 +602,35 @@ class Lap(object):
         return metric(fixes[-1])
 
 
-    def get_nearest_speed_direction_change(self, seconds):
-        return self.get_nearest_metric_direction_change(self.speed_markers, seconds)
+    def get_nearest_speed_direction_change(self, seconds, look_forward=False):
+        return self.get_nearest_metric_direction_change(self.speed_markers, seconds, look_forward)
 
-    def get_nearest_lin_g_direction_change(self, seconds):
-        return self.get_nearest_metric_direction_change(self.lin_g_markers, seconds)
+    def get_nearest_lin_g_direction_change(self, seconds, look_forward=False):
+        return self.get_nearest_metric_direction_change(self.lin_g_markers, seconds, look_forward)
 
-    def get_nearest_lat_g_direction_change(self, seconds):
-        return self.get_nearest_metric_direction_change(self.lat_g_markers, seconds)
+    def get_nearest_lat_g_direction_change(self, seconds, look_forward=False):
+        return self.get_nearest_metric_direction_change(self.lat_g_markers, seconds, look_forward)
 
-    def get_nearest_metric_direction_change(self, markers, seconds):
+    def get_nearest_metric_direction_change(self, markers, seconds, look_forward=False):
         # Find the closest speed change that is _behind_ this fix
+        # Unless look_forward=True, then we look _ahead_ of this fix
 
         # Assumes speed_markers are sorted in time
         reverse_markers = [m for m in markers]
-        reverse_markers.reverse()
+        if not look_forward:
+            reverse_markers.reverse()
         for marker in reverse_markers:
             this_seconds = marker['seconds']
-            if this_seconds > seconds:
-                continue
-
-            # else this_seconds < seconds
-            return marker
+            if not look_forward:
+                if this_seconds > seconds:
+                    continue
+                else:
+                    return marker
+            else:
+                if this_seconds < seconds:
+                    continue
+                else:
+                    return marker
 
         return None
 
