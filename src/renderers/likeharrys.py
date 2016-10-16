@@ -1,4 +1,6 @@
 import cv2
+import math
+
 from renderers import BaseRenderer
 class LikeHarrysRenderer(BaseRenderer):
 
@@ -10,6 +12,7 @@ class LikeHarrysRenderer(BaseRenderer):
         self.video = video
 
         self.g_meter_size = 150
+        self.g_meter_ball_size = 10
 
     def render_frame(self, frame, start_frame, framenum, lap):
         frames_in = framenum - start_frame
@@ -58,21 +61,10 @@ class LikeHarrysRenderer(BaseRenderer):
                         (255, 255, 255), 1, alpha=0.1)
 
         # G-force ball
-
-
-
-        # Text reading
         lat_g = lap.get_lat_g_at_time(seconds_total_in)
         lin_g = lap.get_lin_g_at_time(seconds_total_in)
-        lat_g_txt = "Lateral Gs: %6.2f" % lat_g
-        lin_g_txt = "Accel Gs: %6.2f" % lin_g
-        cv2.putText(frame, lat_g_txt, (200, 150), cv2.FONT_HERSHEY_PLAIN, 4,
-                    (255, 255, 255), 2, cv2.CV_AA)
 
-        cv2.putText(frame, lin_g_txt, (900, 150), cv2.FONT_HERSHEY_PLAIN, 4,
-                    (255, 255, 255), 2, cv2.CV_AA)
-
-
+        self.draw_gforce_ball(frame, origin, lat_g, lin_g)
 
         # See if we have any vmin/vmax annotations
         speedinfo = lap.get_nearest_speed_direction_change(
@@ -151,6 +143,34 @@ class LikeHarrysRenderer(BaseRenderer):
         cv2.imshow('frame', frame)
         keypress = cv2.waitKey(1)
         return frame
+
+    def draw_gforce_ball(self, frame, origin, latg, ling):
+        total_g = math.sqrt((latg * latg) + (ling * ling))
+        total_g_txt = "%6.2fg" % total_g
+
+        # TODO: Make this a bit more dynamic, bump it up if the
+        # video has morethan 2gs in it
+        max_g = 2.0
+
+        scale_lat = latg / max_g
+        scale_lin = ling / max_g
+
+        orig_x = origin[0] + (self.g_meter_size / max_g) * (-1 * scale_lat)
+        orig_y = origin[1] + (self.g_meter_size / max_g) * scale_lin
+
+        ball_origin = (int(orig_x), int(orig_y))
+
+        ball_color = (255, 255, 100)
+
+        self.alpha_circle(frame, ball_origin, self.g_meter_ball_size,
+                          ball_color, -1, alpha=0.1)
+
+        self.alpha_text(frame, total_g_txt,
+                        (ball_origin[0] - (self.g_meter_ball_size / 2) - 40,
+                         ball_origin[1] - (self.g_meter_ball_size)),
+                        cv2.FONT_HERSHEY_PLAIN, 1.5,
+                        (255, 255, 255), 1, cv2.CV_AA, 0.1)
+
 
 
     def draw_map(self, frame, start_frame, framenum, lap):

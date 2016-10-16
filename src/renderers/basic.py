@@ -155,8 +155,6 @@ class BasicRenderer(object):
         map_orig = (map_x - self.map_width / 2,
                     map_y + (self.map_height / 2))
 
-        print map_orig
-
         def get_point(fix=None, lat=None, lon=None):
             if not lat and fix:
                 lat = fix.lat

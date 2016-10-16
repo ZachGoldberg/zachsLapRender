@@ -16,11 +16,15 @@ class BaseRenderer(object):
         cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
     def alpha_line(self, frame, start, fin, color, thickness, lineType=8, shift=0, alpha=0):
-        print start
-        print fin
-
         beta = 1 - alpha
         gamma = 0
         overlay = frame.copy()
         cv2.line(frame, start, fin, color, thickness, lineType, shift)
+        cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
+
+    def alpha_text(self, frame, txt, origin, font, size, color, stroke, linetype, alpha):
+        beta = 1 - alpha
+        gamma = 0
+        overlay = frame.copy()
+        cv2.putText(frame, txt, origin, font, size, color, stroke, linetype)
         cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
