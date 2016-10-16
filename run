@@ -66,7 +66,7 @@ run_test_real_video() {
 
 
 run_test_real_video2() {
-    run_zachs  -vd="/home/zgoldberg/Videos/RacingVideos/StreetsCW1082016/" --input-data-file=laps10082016.csv -vv $@
+    run_zachs -t='StreetsofWillow(CW)' -vd="/home/zgoldberg/Videos/RacingVideos/StreetsCW1082016/" --input-data-file=laps10082016.csv -vv  $@
 }
 
 run_install_completion () {

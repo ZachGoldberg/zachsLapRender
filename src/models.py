@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from utils import creation_time, within_x_sec, gopro_video_names_in_order
 
 from renderers.basic import BasicRenderer
+from renderers.likeharrys import LikeHarrysRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class Video(object):
         self.duration = None
         self.matched_laps = []
         self.frame_offset = 0
-        self.renderer = BasicRenderer()
+        self.renderer = LikeHarrysRenderer(self)
         self._calc_times()
 
     def file_basenames(self):
@@ -107,7 +108,7 @@ class Video(object):
 
 
     def render_frame(self, frame, start_frame, framenum, lap):
-        return self.renderer.render_frame(self, frame, start_frame, framenum, lap)
+        return self.renderer.render_frame(frame, start_frame, framenum, lap)
 
     def next_sync_event(self, frames_in):
         seconds_in = frames_in / self.fps

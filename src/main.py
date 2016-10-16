@@ -50,6 +50,10 @@ def build_parser():
                         dest="outputdir", type=str,
                         help="Output directory for generated videos")
 
+    parser.add_argument("-t", "--trackname",
+                        dest="trackname", type=str,
+                        help="Trackname (for overlay)")
+
     parser.add_argument("-m", "--manual-offset",
                         dest="manual_offset", action='store_true',
                         help="Allow the user to manually select the time offset for each video file")
@@ -125,6 +129,10 @@ if __name__ == '__main__':
         sys.exit(0)
 
     videos = collect_videos(args.videodir, laps)
+
+    if args.trackname:
+        for video in videos:
+            video.trackname = args.trackname
 
     if args.analyze_videos:
         print_video_stats(videos)

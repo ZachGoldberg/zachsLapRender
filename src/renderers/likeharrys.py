@@ -1,23 +1,26 @@
 import cv2
+from renderers import BaseRenderer
+class LikeHarrysRenderer(BaseRenderer):
 
-class BasicRenderer(object):
-
-    def __init__(self):
+    def __init__(self, video):
         self.map_y = 150
         self.map_x = -50
         self.map_width = 300
         self.map_height = 300
+        self.video = video
 
-    def render_frame(self, video, frame, start_frame, framenum, lap):
+        self.g_meter_size = 150
+
+    def render_frame(self, frame, start_frame, framenum, lap):
         frames_in = framenum - start_frame
-        seconds_total_in = frames_in / video.fps
+        seconds_total_in = frames_in / self.video.fps
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
 
 
         # Render watermark
         txt = "Rendered by zachsLapRenderer"
-        cv2.putText(frame, txt, (5, video.height - 10), cv2.FONT_HERSHEY_PLAIN, 2,
+        cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 255, 255), 1, cv2.CV_AA)
 
         # Render lap-clock
@@ -32,7 +35,33 @@ class BasicRenderer(object):
         cv2.putText(frame, mph_txt, (900, 100), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
 
-        # Render G force in numbers for now
+        # Render G force in a circle
+        # Background Circle
+        radius = self.g_meter_size / 2
+        origin = (radius + 5, self.from_bottom(radius + 35))
+        self.alpha_circle(frame, origin, radius, (100, 100, 100), -1, alpha=0.2)
+
+        # Background outline
+        self.alpha_circle(frame, origin, radius, (200, 200, 200), 1, alpha=0.2)
+        # Outer Stroke
+        self.alpha_circle(frame, origin, int(radius * 0.65), (255, 255, 255), 1, alpha=0.1)
+        # Inner Stroke
+        self.alpha_circle(frame, origin, int(radius * 0.3), (255, 255, 255), 1, alpha=0.1)
+        # Crosshairs
+        self.alpha_line(frame,
+                        (radius + 5, self.from_bottom(2*radius + 35)),
+                        (radius + 5, self.from_bottom(35)),
+                        (255, 255, 255), 1, alpha=0.1)
+        self.alpha_line(frame,
+                        (5, origin[1]),
+                        (2 * radius + 5, origin[1]),
+                        (255, 255, 255), 1, alpha=0.1)
+
+        # G-force ball
+
+
+
+        # Text reading
         lat_g = lap.get_lat_g_at_time(seconds_total_in)
         lin_g = lap.get_lin_g_at_time(seconds_total_in)
         lat_g_txt = "Lateral Gs: %6.2f" % lat_g
@@ -117,14 +146,14 @@ class BasicRenderer(object):
                                            METRIC_APEX_FADE, (200, 300))
 
 
-        self.draw_map(video, frame, start_frame, framenum, lap)
+        self.draw_map(frame, start_frame, framenum, lap)
 
         cv2.imshow('frame', frame)
         keypress = cv2.waitKey(1)
         return frame
 
 
-    def draw_map(self, video, frame, start_frame, framenum, lap):
+    def draw_map(self, frame, start_frame, framenum, lap):
         # Fuck me.
         # Step 1, compute the GPS bounding box
         bounds = lap.get_gps_bounds()
@@ -146,16 +175,14 @@ class BasicRenderer(object):
         map_y = self.map_y
 
         if map_x < 0:
-            map_x = video.width + self.map_x
+            map_x = self.video.width + self.map_x
 
         if map_y < 0:
-            map_y = video.height + self.map_y
+            map_y = self.video.height + self.map_y
 
 
         map_orig = (map_x - self.map_width / 2,
                     map_y + (self.map_height / 2))
-
-        print map_orig
 
         def get_point(fix=None, lat=None, lon=None):
             if not lat and fix:
@@ -178,7 +205,7 @@ class BasicRenderer(object):
             last_fix = fix
 
         frames_in = framenum - start_frame
-        seconds_total_in = frames_in / video.fps
+        seconds_total_in = frames_in / self.video.fps
         # Now let's draw us!
         (lat, lon) = lap.get_gps_at_time(seconds_total_in)
         cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)
