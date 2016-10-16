@@ -426,6 +426,18 @@ class Video(object):
 
         return lapvideos
 
+
+    def find_lap_by_framenum(self, framenum):
+        if not self.matched_laps:
+            return None
+
+        for lap in self.matched_laps:
+            if lap['start_frame'] <= framenum <= lap['end_frame']:
+                return lap
+
+        return None
+
+
     def calibrate_offset(self):
         if not self.matched_laps:
             return
@@ -436,9 +448,9 @@ class Video(object):
         print "# MANUAL OFFSET CALIBRATION "
         print "#" * 100
         print """In a moment a window will appear which shows the first frame of the lap.  This frame may be offset from the actual start of the lap due to the difference in the block on your laptimer and your camera."""
-        print "\nUse the arrow keys to move the video sync forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames)."
-        print "\nPress w to advance to the first frame of the next major telemtry change or visual sync point (start/finish, braking zone etc.), or q to go to the previous."
-        print "\nThe sync process starts with start/finish.  It is highly recommended to press w and q a few times to confirm that the sync lines up consistently in each video file and use the arrow keys to refine until you feel it is frame-perfect."
+        print "\nUse the arrow keys to move the video forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames)."
+        print "\nHold shift and the arrow keys or page up and page down to move the video sync by the appropriate amount."
+        print "\nPress space to start and stop playback and test the video sync"
         print "\nPress Enter when finished syncing\n"
         print "\nVideo File: %s" % self.filenames[0]
         print "Video Start Time (Camera clock): %s" % self.start_time
@@ -454,44 +466,73 @@ class Video(object):
         cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, start_framenum)
 
         end_calibration = False
+        UP_KEY = 65362
+        RIGHT_KEY = 65363
+        DOWN_KEY = 65364
+        LEFT_KEY = 65361
         KEY_DELTA = {
-            65361: -1,
-            65363: 1,
+            LEFT_KEY: -1,
+            RIGHT_KEY: 1,
             65365: 300,
             65366: -300
         }
 
         ENTER = 13
+        SPACE = 32
         W_KEY = 119
         Q_KEY = 113
         framenum = start_framenum
         offset = 0
+        playing = False
         while(not end_calibration):
             print "Current Frame: %s, sync offset: %s" % (framenum, offset)
 
             ret, frame = cap.read()
 
             if ret:
-                lapinfo = self.matched_laps[0]
+                # Find which lap we're in based on framenum
+                lapinfo = self.find_lap_by_framenum(framenum + offset) or self.matched_laps[0]
+
                 lap_start_framenum = lapinfo['start_frame']
-                frame = self.render_frame(frame, lap_start_framenum, framenum, lapinfo['lap'])
+                frame = self.render_frame(frame, lap_start_framenum, framenum + offset, lapinfo['lap'])
                 cv2.imshow('frame', frame)
-                keypress = cv2.waitKey(-1)
+                if playing:
+                    wait = 1
+                else:
+                    wait = -1
+
+                keypress = cv2.waitKey(wait)
                 movement = 0
-                print keypress
-                if keypress == ENTER:
+                print "Keypress: %s" % keypress
+                if keypress == -1:
+                    framenum += 1
+                elif keypress == ENTER:
                     self.frame_offset = offset
                     cap.release()
                     cv2.destroyAllWindows()
                     return
-                elif keypress == W_KEY:
-                    movement = self.next_sync_event(framenum) - framenum
-                elif keypress == Q_KEY:
-                    movement = self.prev_sync_event(framenum) - framenum
+                # Experimental features that aren't quite finished and might crash:
+                #elif keypress == W_KEY:
+                #    movement = self.next_sync_event(framenum) - framenum
+                #elif keypress == Q_KEY:
+                #    movement = self.prev_sync_event(framenum) - framenum
+                elif keypress == SPACE:
+                    playing = not playing
+                elif keypress == UP_KEY:
+                    offset += 1
+                    movement = 0
+                    cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
+                elif keypress == DOWN_KEY:
+                    offset -= 1
+                    movement = 0
+                    cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
                 else:
                     movement = KEY_DELTA.get(keypress, 0)
-                    offset += movement
+
+                print "Moving offset: %s, movemnet: %s" % (offset, movement)
+
                 if movement == 1:
+                    # Don't actually seek to get the next frame since seeking is expensive
                     framenum += 1
                     continue
 
