@@ -17,6 +17,10 @@ Requirements:
 
 
 TODO:
+ - Show filename and lap number in screen
+ - Show all laptimes in curses view and allow selection of which ones to actually render
+ - Show previous laptime in bold letters
+ - Show current and last laptime in a box somewhere
  - Store offsets in some kind of config / preference file so I dont have to do it
  everytime during testing...
  - Render (# CPU) videos at once, make this an optional flag

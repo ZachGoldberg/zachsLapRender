@@ -31,7 +31,7 @@ class Video(object):
         self.height = None
         self.duration = None
         self.matched_laps = []
-        self.frame_offset = 8595
+        self.frame_offset = 0
 
         self._calc_times()
 
@@ -119,7 +119,7 @@ class Video(object):
         # Render MPH
         # Erg, first figure out MPH
         mph = lap.get_mph_at_time(seconds_total_in)
-        mph_txt = "%6.2f MPH" % mph
+        mph_txt = "%6.0f MPH" % mph
         cv2.putText(frame, mph_txt, (900, 100), cv2.FONT_HERSHEY_PLAIN, 4,
                     (255, 255, 255), 2, cv2.CV_AA)
 
@@ -330,6 +330,10 @@ class Video(object):
         lapvideos = []
 
         for lapinfo in self.matched_laps:
+            if not lapinfo.get("render", True):
+                logger.debug("Skipping lap %s due to render=false" % lapinfo['lap'])
+                continue
+
             # Load up the old video
             oldcap = cv2.VideoCapture(self.filenames[0])
 
@@ -362,14 +366,14 @@ class Video(object):
             fourcc = cv2.cv.CV_FOURCC(*'XVID')
             out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
 
-            logger.debug("Seeking to lap start at %s..." % framenum)
+            logger.debug("Seeking to lap start at %s with offset %s..." % (framenum, self.frame_offset))
             oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             while(oldcap.isOpened()):
                 framenum += 1
                 ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
-                    out.write(self.render_frame(frame, start_frame, framenum, lapinfo["lap"]))
+                    out.write(self.render_frame(frame, start_frame, framenum + self.frame_offset, lapinfo["lap"]))
                     frames_writen += 1
                     if frames_writen % 20 == 0:
                         logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
@@ -390,7 +394,7 @@ class Video(object):
             audiofile = "/tmp/zachsaudio.wav"
             newaudiofile = "/tmp/zachaudioout.wav"
             subprocess.call(
-                "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (self.filenames, audiofile),
+                "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (self.filenames[0], audiofile),
                 shell=True)
 
             old_audio = wave.open(audiofile, 'rb')
@@ -563,6 +567,7 @@ class Video(object):
             end_frame = start_frame + (lap.lap_time * self.fps)
             lap_info = {
                 "lap": lap,
+                "render": True,
                 "start_seconds": start_seconds,
                 "start_frame": start_frame,
                 "end_frame": end_frame
@@ -794,8 +799,13 @@ class Lap(object):
                                                                self.start_time,
                                                                self.end_time)
 
+    def get_time(self):
+        mins = self.lap_time / 60
+        sec = self.lap_time % 60
+        return "%.2d:%06.3f" % (mins, sec)
+
     def __str__(self):
-        return "Lap %s, %s fixes" % (self.lapnum, len(self.fixes))
+        return "Lap %s, %s, %s fixes" % (self.lapnum, self.get_time(), len(self.fixes))
 
 
 class Fix(object):

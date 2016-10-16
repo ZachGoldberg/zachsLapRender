@@ -73,5 +73,6 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
         laps = []
         for lapnum, fixes in raw_laps.iteritems():
             laps.append(Lap(lapnum, fixes))
+            print laps[-1].start_time
 
         return laps

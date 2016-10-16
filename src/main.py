@@ -2,6 +2,8 @@ import argparse
 import logging
 import parsers
 import sys
+from picker import Picker
+
 
 from models import Fix, Lap, Session, Day
 from utils import collect_videos
@@ -56,6 +58,10 @@ def build_parser():
                         dest="youtube", action='store_true',
                         help="Upload all laps to youtube")
 
+    parser.add_argument("-a", "--all-laps",
+                        dest="all_laps", action='store_true',
+                        help="Render all found laps (default is to allow user choice)")
+
 
     return parser
 
@@ -71,8 +77,30 @@ def print_lap_stats(laps):
 
 def print_video_stats(videos):
     for video in videos:
+        print "*" * 30
         print video
+        for lap in video.matched_laps:
+            print lap['lap']
 
+def select_laps_to_render(videos):
+    laps = {}
+    for video in videos:
+        for lap in video.matched_laps:
+            print lap['lap']
+            key = str(lap['lap'])
+            laps[key] = lap
+            lap["render"] = False
+
+    keys = laps.keys()
+    keys.sort()
+
+    opts = Picker(
+        title = 'Select laps to render',
+        options = keys
+    ).getSelected()
+
+    for lap in opts:
+        laps[lap]['render'] = True
 
 if __name__ == '__main__':
     # Do things with argparse
@@ -121,14 +149,17 @@ if __name__ == '__main__':
         sys.exit(1)
 
 
-    if args.manual_offset:
-        for video in matched_videos:
-            video.calibrate_offset()
+    if not args.all_laps:
+        select_laps_to_render(matched_videos)
 
     # Collect user's YouTube OAuth credentials before starting rendering process,
     # that way we can be finished with all user input and just run
     if args.youtube:
         youtube.get_authenticated_service()
+
+    if args.manual_offset:
+        for video in matched_videos:
+            video.calibrate_offset()
 
     # For now, just create a new .mp4 with each lap
     # we've discovered.
