@@ -69,6 +69,7 @@ INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_
             lap_fixes = raw_laps.get(fix.lap_index, [])
             lap_fixes.append(fix)
             raw_laps[fix.lap_index] = lap_fixes
+            print fix.wall_time, fix.lap_index
 
         laps = []
         for lapnum, fixes in raw_laps.iteritems():
