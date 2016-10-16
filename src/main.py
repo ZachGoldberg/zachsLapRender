@@ -159,7 +159,13 @@ if __name__ == '__main__':
 
     if args.manual_offset:
         for video in matched_videos:
-            video.calibrate_offset()
+            has_renderable_laps = False
+            for lap in video.matched_laps:
+                if lap.get('render'):
+                    has_renderable_laps = True
+                    break
+            if has_renderable_laps:
+                video.calibrate_offset()
 
     # For now, just create a new .mp4 with each lap
     # we've discovered.

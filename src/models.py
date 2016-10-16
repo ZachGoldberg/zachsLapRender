@@ -366,16 +366,16 @@ class Video(object):
             fourcc = cv2.cv.CV_FOURCC(*'XVID')
             out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
 
-            logger.debug("Seeking to lap start at %s with offset %s..." % (framenum, self.frame_offset))
+            logger.debug("Seeking to lap start at %s ..." % framenum)
             oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             while(oldcap.isOpened()):
                 framenum += 1
                 ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
-                    out.write(self.render_frame(frame, start_frame, framenum + self.frame_offset, lapinfo["lap"]))
+                    out.write(self.render_frame(frame, start_frame, framenum, lapinfo["lap"]))
                     frames_writen += 1
-                    if frames_writen % 20 == 0:
+                    if frames_writen % 30 == 0:
                         logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
                 else:
                     skipped += 1
@@ -485,8 +485,8 @@ class Video(object):
         SPACE = 32
         W_KEY = 119
         Q_KEY = 113
-        framenum = start_framenum
         offset = 0
+        framenum = start_framenum + offset
         playing = False
         while(not end_calibration):
             print "Current Frame: %s, sync offset: %s" % (framenum, offset)
@@ -497,8 +497,8 @@ class Video(object):
                 # Find which lap we're in based on framenum
                 lapinfo = self.find_lap_by_framenum(framenum + offset) or self.matched_laps[0]
 
-                lap_start_framenum = lapinfo['start_frame']
-                frame = self.render_frame(frame, lap_start_framenum, framenum + offset, lapinfo['lap'])
+                lap_start_framenum = lapinfo['start_frame'] + offset
+                frame = self.render_frame(frame, lap_start_framenum, framenum, lapinfo['lap'])
                 cv2.imshow('frame', frame)
                 if playing:
                     wait = 1
@@ -524,11 +524,11 @@ class Video(object):
                     playing = not playing
                 elif keypress == UP_KEY:
                     offset += 1
-                    movement = 0
+                    framenum += 1
                     cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
                 elif keypress == DOWN_KEY:
                     offset -= 1
-                    movement = 0
+                    framenum -= 1
                     cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
                 else:
                     movement = KEY_DELTA.get(keypress, 0)
