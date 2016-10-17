@@ -3,6 +3,7 @@ import os
 import subprocess
 import tzlocal
 import wave
+from pydub import AudioSegment
 
 
 from datetime import datetime
@@ -80,6 +81,13 @@ def collect_videos(dirname, laps=None):
 
     return videos
 
+def mix_audiofiles(f1, f2, output):
+    sound1 = AudioSegment.from_file(f1)
+    sound2 = AudioSegment.from_file(f2)
+
+    combined = sound1.overlay(sound2)
+
+    combined.export(output, format='wav')
 
 def extract_audio(source, newaudiofile, start_time, duration):
     tmpaudiofile = "/tmp/zachsaudio.wav"

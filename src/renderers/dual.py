@@ -3,9 +3,12 @@ import logging
 import math
 import numpy as np
 import os
+import subprocess
+
+from threading import Thread
 
 from renderers import BaseRenderer
-from utils import extract_audio
+from utils import extract_audio, mix_audiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -90,20 +93,41 @@ class DualRenderer(BaseRenderer):
             if frames_writen % 30 == 0:
                 logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
 
+            thread1 = None
+            thread2 = None
+            t1val = {}
+            t2val = {}
             if framenum1 <= end_frame1:
-                ret1, frame1 = cap1.read()
 
-                self.video1.render_frame(frame1, start_frame1, framenum1, lapinfo1["lap"])
+                def render_vid(val):
+                    ret1, frame1 = cap1.read()
+                    self.video1.render_frame(frame1, start_frame1, framenum1, lapinfo1["lap"])
+                    val['frame'] = frame1
+
+                thread1 = Thread(target=render_vid, args=(t1val, ))
+                thread1.start()
             else:
                 # Frame1 will be from the last iteration
                 pass
 
             if framenum2 <= end_frame2:
-                ret2, frame2 = cap2.read()
-                self.video2.render_frame(frame2, start_frame2, framenum2, lapinfo2["lap"])
+                def render_vid2(val):
+                    ret2, frame2 = cap2.read()
+                    self.video2.render_frame(frame2, start_frame2, framenum2, lapinfo2["lap"])
+                    val['frame'] = frame2
+
+                thread2 = Thread(target=render_vid2, args=(t2val, ))
+                thread2.start()
             else:
                 # Frame2 will be from the last iteration
                 pass
+
+            if thread1:
+                thread1.join()
+                frame1 = t1val['frame']
+            if thread2:
+                thread2.join()
+                frame2 = t2val['frame']
 
             merged_frame = self.merge_frames(frame1, frame2)
             out.write(merged_frame)
@@ -111,17 +135,24 @@ class DualRenderer(BaseRenderer):
             cv2.imshow('frame', merged_frame)
             keypress = cv2.waitKey(1)
 
-            if framenum1 > end_frame and framenum2 > end_frame:
+            if framenum1 > end_frame1 and framenum2 > end_frame2:
                 break
 
         logger.debug("Buttoning up video...")
-        oldcap.release()
+        cap1.release()
+        cap2.release()
         out.release()
         cv2.destroyAllWindows()
 
         logger.debug("Extracting audio...")
+        newaudiofile1 = "/tmp/zachaudioout1.wav"
+        extract_audio(self.video1.filenames[0], newaudiofile1, start_time1, duration1)
+
+        newaudiofile2 = "/tmp/zachaudioout2.wav"
+        extract_audio(self.video2.filenames[0], newaudiofile2, start_time2, duration2)
+
         newaudiofile = "/tmp/zachaudioout.wav"
-        extract_audio(self.filenames[0], newaudiofile, start_time, duration)
+        mix_audiofiles(newaudiofile1, newaudiofile2, newaudiofile)
 
         logger.debug("Merging video and audio data...")
         cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
