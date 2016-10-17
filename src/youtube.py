@@ -112,7 +112,7 @@ def get_authenticated_service(args=None):
     http=credentials.authorize(httplib2.Http()))
 
 
-def upload_video(video, lapvideo):
+def upload_video(lapvideo):
     args = argparse.Namespace()
     args.file = lapvideo
     args.title = "Zachs Lap Render: %s" % os.path.basename(lapvideo)
