@@ -59,7 +59,7 @@ class LikeHarrysRenderer(BaseRenderer):
         # Render MPH
         # Erg, first figure out MPH
         mph = lap.get_mph_at_time(seconds_total_in)
-        mph_txt = "%6.0f MPH" % mph
+        mph_txt = "%3.0f mph" % mph
         g_meter_right_edge = (margin + radius * 2)
         topLeft = [(margin + g_meter_right_edge),
                    self.from_bottom(40 + 60)]
@@ -70,18 +70,36 @@ class LikeHarrysRenderer(BaseRenderer):
                                      (255, 255, 255),
                                      1,
                                      cv2.CV_AA,
-                                     20, 0.1,
+                                     10, 0.1,
                                      fill=True,
                                      fillColor=(50, 50, 50))
 
-        cv2.putText(frame, mph_txt, (900, 100),
-                    cv2.FONT_HERSHEY_PLAIN, 4,
-                    (255, 255, 255), 2, cv2.CV_AA)
+        self.alpha_text(frame, mph_txt,
+                        (topLeft[0] + margin * 3,
+                         self.from_bottom(55)),
+                        cv2.FONT_HERSHEY_PLAIN, 2.5,
+                        (255, 255, 255), 2, cv2.CV_AA, 0.1)
 
-        # Render lap-clock
-        txt = "Lap Time: %.2d:%06.3f" % (minutes_in, seconds_in)
-        cv2.putText(frame, txt, (200, 100), cv2.FONT_HERSHEY_PLAIN, 4,
-                    (255, 255, 255), 2, cv2.CV_AA)
+        topLeft = [(margin + g_meter_right_edge),
+                   self.from_bottom(110 + margin + 60)]
+        bottomRight = [(margin + g_meter_right_edge + meter_width),
+                       self.from_bottom(110)]
+
+        self.alpha_rounded_rectangle(frame,
+                                     topLeft, bottomRight,
+                                     (255, 255, 255),
+                                     1,
+                                     cv2.CV_AA,
+                                     10, 0.1,
+                                     fill=True,
+                                     fillColor=(50, 50, 50))
+
+        txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+        self.alpha_text(frame, txt,
+                        (topLeft[0] + margin * 3,
+                         self.from_bottom(130)),
+                        cv2.FONT_HERSHEY_PLAIN, 2.5,
+                        (255, 255, 255), 2, cv2.CV_AA, 0.1)
 
         # See if we have any vmin/vmax annotations
         speedinfo = lap.get_nearest_speed_direction_change(
