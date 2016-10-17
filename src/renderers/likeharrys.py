@@ -140,8 +140,6 @@ class LikeHarrysRenderer(BaseRenderer):
 
         self.draw_map(frame, start_frame, framenum, lap)
 
-        cv2.imshow('frame', frame)
-        keypress = cv2.waitKey(1)
         return frame
 
     def draw_gforce_ball(self, frame, origin, latg, ling):

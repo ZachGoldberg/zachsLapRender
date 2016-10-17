@@ -10,7 +10,7 @@ import wave
 
 from dateutil import parser
 from datetime import datetime, timedelta
-from utils import creation_time, within_x_sec, gopro_video_names_in_order
+from utils import creation_time, within_x_sec, gopro_video_names_in_order, extract_audio
 
 from renderers.basic import BasicRenderer
 from renderers.likeharrys import LikeHarrysRenderer
@@ -34,7 +34,7 @@ class Video(object):
         self.height = None
         self.duration = None
         self.matched_laps = []
-        self.frame_offset = 0
+        self.frame_offset = -28
         self.renderer = LikeHarrysRenderer(self)
         self._calc_times()
 
@@ -171,6 +171,9 @@ class Video(object):
 
         return frames_in
 
+    def renderable_laps(self):
+        return [m for m in self.matched_laps if m['render']]
+
     def render_laps(self, outputdir):
         lapvideos = []
 
@@ -218,7 +221,11 @@ class Video(object):
                 ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
-                    out.write(self.render_frame(frame, start_frame, framenum, lapinfo["lap"]))
+                    rendered_frame = self.render_frame(frame, start_frame, framenum, lapinfo["lap"])
+                    out.write(rendered_frame)
+                    cv2.imshow('frame', rendered_frame)
+                    keypress = cv2.waitKey(1)
+
                     frames_writen += 1
                     if frames_writen % 30 == 0:
                         logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
@@ -236,33 +243,8 @@ class Video(object):
             cv2.destroyAllWindows()
 
             logger.debug("Extracting audio...")
-            audiofile = "/tmp/zachsaudio.wav"
             newaudiofile = "/tmp/zachaudioout.wav"
-            subprocess.call(
-                "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (self.filenames[0], audiofile),
-                shell=True)
-
-            old_audio = wave.open(audiofile, 'rb')
-            new_audio = wave.open(newaudiofile, 'wb')
-
-            framerate = old_audio.getframerate()
-            start_frame = float(start_time * framerate)
-            end_frame = start_frame + (duration * framerate)
-
-            pos = start_time * framerate
-
-            # A ghetto "seek"
-            old_audio.readframes(int(pos))
-
-            relaventframes = old_audio.readframes(int(end_frame - start_frame))
-
-            new_audio.setnchannels(old_audio.getnchannels())
-            new_audio.setsampwidth(old_audio.getsampwidth())
-            new_audio.setframerate(framerate)
-            new_audio.writeframes(relaventframes)
-
-            new_audio.close()
-            old_audio.close()
+            extract_audio(self.filenames[0], newaudiofile, start_time, duration)
 
             logger.debug("Merging video and audio data...")
             cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
@@ -327,7 +309,7 @@ class Video(object):
         SPACE = 32
         W_KEY = 119
         Q_KEY = 113
-        offset = 0
+        offset = -28
         framenum = start_framenum + offset
         playing = False
         while(not end_calibration):

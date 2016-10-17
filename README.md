@@ -17,6 +17,8 @@ Requirements:
 
 
 TODO:
+ - Two laps side by side!
+ - Couple of seconds before and after video
  - Show filename and lap number in screen
  - Show all laptimes in curses view and allow selection of which ones to actually render
  - Show previous laptime in bold letters
@@ -26,7 +28,6 @@ TODO:
  - Render (# CPU) videos at once, make this an optional flag
  - Upload videos in parallel after rendering
  - Options for MPH vs KPH
- - Show zachsLapRender watermark
  - Show name of course of the data
  - Show maximum corner Gs as well
  - Show predictive laptime throughout the lap, compared to best of the day

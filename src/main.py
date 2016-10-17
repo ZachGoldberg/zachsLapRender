@@ -175,6 +175,22 @@ if __name__ == '__main__':
             if has_renderable_laps:
                 video.calibrate_offset()
 
+
+    dual_vids = []
+    laps = [420, 432]
+    for video in videos:
+        for lap in video.matched_laps:
+            lap['render'] = False
+            if lap['lap'].lapnum in laps:
+                lap['render'] = True
+                dual_vids.append(video)
+
+    from renderers.dual import DualRenderer
+    from renderers.likeharrys import LikeHarrysRenderer
+    dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
+    dr.render_laps(args.outputdir or "/tmp/")
+
+
     # For now, just create a new .mp4 with each lap
     # we've discovered.
     # Then we'll write small bits to each of those, and build from there

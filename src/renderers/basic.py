@@ -119,8 +119,6 @@ class BasicRenderer(object):
 
         self.draw_map(video, frame, start_frame, framenum, lap)
 
-        cv2.imshow('frame', frame)
-        keypress = cv2.waitKey(1)
         return frame
 
 

@@ -2,7 +2,7 @@ import logging
 import os
 import subprocess
 import tzlocal
-
+import wave
 
 
 from datetime import datetime
@@ -79,6 +79,37 @@ def collect_videos(dirname, laps=None):
 
 
     return videos
+
+
+def extract_audio(source, newaudiofile, start_time, duration):
+    tmpaudiofile = "/tmp/zachsaudio.wav"
+    subprocess.call(
+        "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (source, tmpaudiofile),
+        shell=True)
+
+    old_audio = wave.open(tmpaudiofile, 'rb')
+    new_audio = wave.open(newaudiofile, 'wb')
+
+    framerate = old_audio.getframerate()
+    start_frame = float(start_time * framerate)
+    end_frame = start_frame + (duration * framerate)
+
+    pos = start_time * framerate
+
+    # A ghetto "seek"
+    old_audio.readframes(int(pos))
+
+    relaventframes = old_audio.readframes(int(end_frame - start_frame))
+
+    new_audio.setnchannels(old_audio.getnchannels())
+    new_audio.setsampwidth(old_audio.getsampwidth())
+    new_audio.setframerate(framerate)
+    new_audio.writeframes(relaventframes)
+
+    new_audio.close()
+    old_audio.close()
+
+
 
 
 """
