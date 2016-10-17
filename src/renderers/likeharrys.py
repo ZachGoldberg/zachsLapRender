@@ -11,7 +11,7 @@ class LikeHarrysRenderer(BaseRenderer):
         self.map_height = 300
         self.video = video
 
-        self.g_meter_size = 150
+        self.g_meter_size = 200
         self.g_meter_ball_size = 10
 
     def render_frame(self, frame, start_frame, framenum, lap):
@@ -26,22 +26,12 @@ class LikeHarrysRenderer(BaseRenderer):
         cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 255, 255), 1, cv2.CV_AA)
 
-        # Render lap-clock
-        txt = "Lap Time: %.2d:%06.3f" % (minutes_in, seconds_in)
-        cv2.putText(frame, txt, (200, 100), cv2.FONT_HERSHEY_PLAIN, 4,
-                    (255, 255, 255), 2, cv2.CV_AA)
-
-        # Render MPH
-        # Erg, first figure out MPH
-        mph = lap.get_mph_at_time(seconds_total_in)
-        mph_txt = "%6.0f MPH" % mph
-        cv2.putText(frame, mph_txt, (900, 100), cv2.FONT_HERSHEY_PLAIN, 4,
-                    (255, 255, 255), 2, cv2.CV_AA)
-
         # Render G force in a circle
         # Background Circle
+        margin = 5
+        meter_width = 200
         radius = self.g_meter_size / 2
-        origin = (radius + 5, self.from_bottom(radius + 35))
+        origin = (radius + margin, self.from_bottom(radius + 35))
         self.alpha_circle(frame, origin, radius, (100, 100, 100), -1, alpha=0.2)
 
         # Background outline
@@ -52,12 +42,12 @@ class LikeHarrysRenderer(BaseRenderer):
         self.alpha_circle(frame, origin, int(radius * 0.3), (255, 255, 255), 1, alpha=0.1)
         # Crosshairs
         self.alpha_line(frame,
-                        (radius + 5, self.from_bottom(2*radius + 35)),
-                        (radius + 5, self.from_bottom(35)),
+                        (radius + margin, self.from_bottom(2*radius + 35)),
+                        (radius + margin, self.from_bottom(35)),
                         (255, 255, 255), 1, alpha=0.1)
         self.alpha_line(frame,
-                        (5, origin[1]),
-                        (2 * radius + 5, origin[1]),
+                        (margin, origin[1]),
+                        (2 * radius + margin, origin[1]),
                         (255, 255, 255), 1, alpha=0.1)
 
         # G-force ball
@@ -65,6 +55,33 @@ class LikeHarrysRenderer(BaseRenderer):
         lin_g = lap.get_lin_g_at_time(seconds_total_in)
 
         self.draw_gforce_ball(frame, origin, lat_g, lin_g)
+
+        # Render MPH
+        # Erg, first figure out MPH
+        mph = lap.get_mph_at_time(seconds_total_in)
+        mph_txt = "%6.0f MPH" % mph
+        g_meter_right_edge = (margin + radius * 2)
+        topLeft = [(margin + g_meter_right_edge),
+                   self.from_bottom(40 + 60)]
+        bottomRight = [(margin + g_meter_right_edge + meter_width),
+                       self.from_bottom(40)]
+        self.alpha_rounded_rectangle(frame,
+                                     topLeft, bottomRight,
+                                     (255, 255, 255),
+                                     1,
+                                     cv2.CV_AA,
+                                     20, 0.1,
+                                     fill=True,
+                                     fillColor=(50, 50, 50))
+
+        cv2.putText(frame, mph_txt, (900, 100),
+                    cv2.FONT_HERSHEY_PLAIN, 4,
+                    (255, 255, 255), 2, cv2.CV_AA)
+
+        # Render lap-clock
+        txt = "Lap Time: %.2d:%06.3f" % (minutes_in, seconds_in)
+        cv2.putText(frame, txt, (200, 100), cv2.FONT_HERSHEY_PLAIN, 4,
+                    (255, 255, 255), 2, cv2.CV_AA)
 
         # See if we have any vmin/vmax annotations
         speedinfo = lap.get_nearest_speed_direction_change(
