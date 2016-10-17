@@ -152,7 +152,10 @@ class DualRenderer(BaseRenderer):
         extract_audio(self.video2.filenames[0], newaudiofile2, start_time2, duration2)
 
         newaudiofile = "/tmp/zachaudioout.wav"
-        mix_audiofiles(newaudiofile1, newaudiofile2, newaudiofile)
+        if duration1 > duration2:
+            mix_audiofiles(newaudiofile1, newaudiofile2, newaudiofile)
+        else:
+            mix_audiofiles(newaudiofile2, newaudiofile1, newaudiofile)
 
         logger.debug("Merging video and audio data...")
         cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
