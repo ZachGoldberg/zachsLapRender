@@ -17,17 +17,23 @@ class DualRenderer(BaseRenderer):
         # TODO: Check that we have a total of only
         # 2 laps marked as renderable
         self.video1 = video1
+        if not video2:
+            video2 = video1
+
         self.video2 = video2
         self.renderer = subrenderer
 
 
     def render_laps(self, outputdir):
-        self.video2.frame_offset = -28
-        self.video2.frame_offset = -34
+        #self.video1.frame_offset = -28
+        #self.video2.frame_offset = -34
 
-        # This assumes each video has a renderable lap
         lapinfo1 = self.video1.renderable_laps()[0]
         lapinfo2 = self.video2.renderable_laps()[0]
+
+
+        if self.video1 == self.video2:
+            lapinfo2 = self.video2.renderable_laps()[1]
 
         # Load up the old videos
         # TODO: Need to account for split gopro videos!

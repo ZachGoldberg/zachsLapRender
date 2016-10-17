@@ -66,6 +66,10 @@ def build_parser():
                         dest="all_laps", action='store_true',
                         help="Render all found laps (default is to allow user choice)")
 
+    parser.add_argument("-c", "--lap-comparison",
+                        dest="lap_comparison", action='store_true',
+                        help="Render 2 laps one ontop of the other")
+
 
     return parser
 
@@ -86,7 +90,7 @@ def print_video_stats(videos):
         for lap in video.matched_laps:
             print lap['lap']
 
-def select_laps_to_render(videos):
+def select_laps_to_render(videos, lap_comparison_mode=False):
     laps = {}
     for video in videos:
         for lap in video.matched_laps:
@@ -98,10 +102,17 @@ def select_laps_to_render(videos):
     keys = laps.keys()
     keys.sort()
 
+    title = 'Select laps to render'
+    if lap_comparison_mode:
+        title = "Select at most 2 laps to render in side-by-side mode"
+
     opts = Picker(
-        title = 'Select laps to render',
+        title = title,
         options = keys
     ).getSelected()
+
+    if lap_comparison_mode:
+        opts = opts[:2]
 
     for lap in opts:
         laps[lap]['render'] = True
@@ -156,14 +167,14 @@ if __name__ == '__main__':
         print "No matching video/laps"
         sys.exit(1)
 
-
-    if not args.all_laps:
-        select_laps_to_render(matched_videos)
-
     # Collect user's YouTube OAuth credentials before starting rendering process,
     # that way we can be finished with all user input and just run
     if args.youtube:
         youtube.get_authenticated_service()
+
+
+    if not args.all_laps or args.lap_comparison:
+        select_laps_to_render(matched_videos, args.lap_comparison)
 
     if args.manual_offset:
         for video in matched_videos:
@@ -176,28 +187,23 @@ if __name__ == '__main__':
                 video.calibrate_offset()
 
 
-    dual_vids = []
-    laps = [420, 432]
-    for video in videos:
-        for lap in video.matched_laps:
-            lap['render'] = False
-            if lap['lap'].lapnum in laps:
-                lap['render'] = True
-                dual_vids.append(video)
+    if args.lap_comparison:
+        dual_vids = [v for v in matched_videos if v.renderable_laps()]
+        if len(dual_vids) == 1:
+            dual_vids.append(None)
 
-    from renderers.dual import DualRenderer
-    from renderers.likeharrys import LikeHarrysRenderer
-    dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-    split_video = dr.render_laps(args.outputdir or "/tmp/")
-    video_id = youtube.upload_video(dual_vids[0], split_video)
-    print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
-    sys.exit(0)
-
-    # For now, just create a new .mp4 with each lap
-    # we've discovered.
-    # Then we'll write small bits to each of those, and build from there
-    for video in matched_videos:
-        lapvideos = video.render_laps(args.outputdir or "/tmp/")
-        for lapvideo in lapvideos:
-            video_id = youtube.upload_video(video, lapvideo)
-            print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+        from renderers.dual import DualRenderer
+        from renderers.likeharrys import LikeHarrysRenderer
+        dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
+        split_video = dr.render_laps(args.outputdir or "/tmp/")
+        video_id = youtube.upload_video(split_video)
+        print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+    else:
+        # For now, just create a new .mp4 with each lap
+        # we've discovered.
+        # Then we'll write small bits to each of those, and build from there
+        for video in matched_videos:
+            lapvideos = video.render_laps(args.outputdir or "/tmp/")
+            for lapvideo in lapvideos:
+                video_id = youtube.upload_video(lapvideo)
+                print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
