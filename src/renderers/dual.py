@@ -19,13 +19,17 @@ class DualRenderer(BaseRenderer):
 
 
     def render_laps(self, outputdir):
+        self.video2.frame_offset = -28
+        self.video2.frame_offset = -34
+
         # This assumes each video has a renderable lap
         lapinfo1 = self.video1.renderable_laps()[0]
         lapinfo2 = self.video2.renderable_laps()[0]
 
         # Load up the old videos
+        # TODO: Need to account for split gopro videos!
         cap1 = cv2.VideoCapture(self.video1.filenames[0])
-        cap2 = cv2.VideoCapture(self.video2.filenames[1])
+        cap2 = cv2.VideoCapture(self.video2.filenames[0])
 
         newfname = os.path.join(outputdir, "lap_%s_%s_join.noaudio.avi" % (
             lapinfo1["lap"].lapnum,
@@ -64,7 +68,7 @@ class DualRenderer(BaseRenderer):
 
 
         end_frame = max([end_frame1, end_frame2])
-        total_frames = max([total_frames1, total_frames2])
+        total_frames = int(max([total_frames1, total_frames2]))
 
         # Create a new videowriter file
         fourcc = cv2.cv.CV_FOURCC(*'XVID')
@@ -126,7 +130,7 @@ class DualRenderer(BaseRenderer):
         subprocess.call(cmd, shell=True)
 
         logger.debug("Finished with %s" % final_newfname)
-
+        return final_newfname
 
     def merge_frames(self, frame1, frame2):
 

@@ -188,8 +188,10 @@ if __name__ == '__main__':
     from renderers.dual import DualRenderer
     from renderers.likeharrys import LikeHarrysRenderer
     dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-    dr.render_laps(args.outputdir or "/tmp/")
-
+    split_video = dr.render_laps(args.outputdir or "/tmp/")
+    video_id = youtube.upload_video(dual_vids[0], split_video)
+    print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+    sys.exit(0)
 
     # For now, just create a new .mp4 with each lap
     # we've discovered.
