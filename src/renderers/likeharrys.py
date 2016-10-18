@@ -29,6 +29,9 @@ class LikeHarrysRenderer(BaseRenderer):
         # How long should the fade out be
         METRIC_APEX_FADE = 1
 
+        # How long to fade in
+        METRIC_FADE_IN = 0.5
+
         # Minimum cornering Gs that will trigger a "max corner g" annotation
         MIN_APEX_CORNER_G = 0.6
 
@@ -129,13 +132,17 @@ class LikeHarrysRenderer(BaseRenderer):
                                            metric_duration, metric_fade, render_pos):
             if not metricinfo:
                 return
+
             seconds_since_metric = seconds_total_in - metricinfo['seconds']
-            if seconds_since_metric < METRIC_APEX_DURATION or True:
+            if seconds_since_metric < METRIC_APEX_DURATION:
                 text = metric_text_func(metricinfo)
                 alpha = 0
                 if seconds_since_metric > start_fade:
                     time_since_fade_start = seconds_since_metric - start_fade
                     alpha = (time_since_fade_start / METRIC_APEX_FADE)
+
+                if seconds_since_metric < METRIC_FADE_IN:
+                    alpha = 1- (seconds_since_metric / METRIC_FADE_IN)
 
                 with self.alpha(alpha, frame):
                     topLeft = (render_pos[0] - 10, render_pos[1] - 40)
