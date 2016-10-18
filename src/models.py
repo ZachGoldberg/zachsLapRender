@@ -9,10 +9,13 @@ import time
 import tzlocal
 import wave
 
+import utils
+
 from threading import Thread
 from dateutil import parser
 from datetime import datetime, timedelta
 from utils import creation_time, within_x_sec, gopro_video_names_in_order, extract_audio
+
 
 from renderers.basic import BasicRenderer
 from renderers.likeharrys import LikeHarrysRenderer
@@ -471,6 +474,8 @@ class Lap(object):
         self.speed_markers = []
         self.lat_g_markers = []
         self.lin_g_markers = []
+        self.total_distance = 0
+        self.distance_at_fix = {}
         self._calc()
 
 
@@ -495,6 +500,8 @@ class Lap(object):
 
         return (min_lat, max_lat, min_long, max_long)
 
+    def get_distance_at_time(self, seconds):
+        return self.get_metric_at_time(lambda x: self.distance_at_fix.get(x, 0), seconds)
 
     def get_mph_at_time(self, seconds):
         return self.get_metric_at_time(lambda x: x.speed_mph, seconds)
@@ -584,6 +591,7 @@ class Lap(object):
         start_time = 0
         min_time = 999999
         utc = ""
+        total_distance = 0
         if self.fixes and self.fixes[0].is_utc:
             utc = " UTC"
 
@@ -630,17 +638,27 @@ class Lap(object):
                 peek_metric_calc(peek_state, 'lat_g', 'lat_g_markers')
                 peek_metric_calc(peek_state, 'lin_g', 'lin_g_markers')
 
+                last_fix = peek_state['last_fix']
+                hav = utils.haversine(last_fix.lat,
+                                      last_fix.long,
+                                      fix.lat,
+                                      fix.long)
+
+                total_distance += hav
+                self.distance_at_fix[fix] = total_distance
 
             if fix.lap_time <= min_time:
                 min_time = fix.lap_time
                 start_time = fix.wall_time
                 self.date = parser.parse(fix.date)
+
             if fix.lap_time > max_time:
                 max_time = fix.lap_time
                 end_time = fix.wall_time
 
             peek_state['last_fix'] = fix
 
+        self.total_distance = total_distance
         self.lap_time = max_time
         self.start_time = parser.parse("%s %s %s" % (fix.date, start_time, utc))
         self.end_time = parser.parse("%s %s %s" % (fix.date, end_time, utc))
@@ -651,9 +669,11 @@ class Lap(object):
 
 
     def details(self):
-        return "Lap Length: %s\nLap Start: %s\nLap End: %s" % (self.lap_time,
-                                                               self.start_time,
-                                                               self.end_time)
+        return "Lap Length: %s\nLap Start: %s\nLap End: %s\nDistance: %s" % (
+            self.lap_time,
+            self.start_time,
+            self.end_time,
+            self.total_distance)
 
     def get_time(self):
         mins = self.lap_time / 60
