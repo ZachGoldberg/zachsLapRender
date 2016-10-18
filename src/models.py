@@ -9,6 +9,7 @@ import time
 import tzlocal
 import wave
 
+from threading import Thread
 from dateutil import parser
 from datetime import datetime, timedelta
 from utils import creation_time, within_x_sec, gopro_video_names_in_order, extract_audio
@@ -218,13 +219,53 @@ class Video(object):
             logger.debug("Seeking to lap start at %s ..." % framenum)
             oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             last_time = time.time()
+
+            n_threads = 2
+            thread_results = {}
+            threads = {}
+            frames = {}
+            def read_thread():
+                t_framenum = framenum
+                while t_framenum < end_frame:
+                    ret, frame = oldcap.read()
+                    frames[t_framenum] = frame
+                    t_framenum += 1
+
+
+            def render_thread(start, skip):
+                t_framenum = start
+                while t_framenum <= end_frame:
+
+                    frame = None
+                    while frame is None:
+                        time.sleep(0.001)
+                        frame = frames.get(t_framenum)
+
+                    rendered_frame = self.render_frame(frame, start_frame, t_framenum, lapinfo["lap"])
+                    thread_results[t_framenum] = rendered_frame
+                    t_framenum += skip
+
+            threads[n_threads + 1] = Thread(target=read_thread)
+            print "Starting frame reader thread..."
+            threads[n_threads + 1].start()
+
+            print "Starting worker threads..."
+
+            for i in range(n_threads):
+                threads[i] = Thread(target=render_thread, args=(framenum + i, n_threads))
+                threads[i].start()
+
             while(oldcap.isOpened()):
                 framenum += 1
-                ret, frame = oldcap.read()
+                #ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
-                    rendered_frame = self.render_frame(frame, start_frame, framenum, lapinfo["lap"])
-                    out.write(rendered_frame)
+                    while thread_results.get(framenum) is None:
+                        time.sleep(.001)
+
+                    out.write(thread_results.get(framenum))
+
+                    del thread_results[framenum]
 
                     if show_video:
                         cv2.imshow('frame', rendered_frame)
