@@ -1,18 +1,13 @@
 import cv2
 import math
+from datetime import timedelta
+
 
 from renderers import BaseRenderer
 class LikeHarrysRenderer(BaseRenderer):
 
     def __init__(self, video):
-        self.map_y = 150
-        self.map_x = -50
-        self.map_width = 300
-        self.map_height = 300
-        self.video = video
-
-        self.g_meter_size = 200
-        self.g_meter_ball_size = 10
+        super(LikeHarrysRenderer, self).__init__(video)
 
     def render_frame(self, frame, start_frame, framenum, lap):
         frames_in = framenum - start_frame
@@ -57,42 +52,32 @@ class LikeHarrysRenderer(BaseRenderer):
 
         # Render watermark
         txt = "Rendered by zachsLapRenderer"
-        cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 255, 255), 1, cv2.CV_AA)
+        self.text(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
+                  (255, 255, 255), 1, cv2.CV_AA)
 
+        # Render lap info
+        lapdate = (lap.start_time + timedelta(seconds=seconds_total_in)).strftime(
+            "%b %d, %Y %I:%M %p")
+        trackname = self.video.trackname
+        self.text(frame, lapdate, (margin * 2, self.from_bottom(75 + self.g_meter_size + margin)),
+                  cv2.FONT_HERSHEY_PLAIN, 1.5,
+                  (255, 255, 255), 1, cv2.CV_AA)
 
+        self.text(frame, trackname, (margin * 2, self.from_bottom(45 + self.g_meter_size + margin)),
+                  cv2.FONT_HERSHEY_PLAIN, 1.5,
+                  (255, 255, 255), 1, cv2.CV_AA)
 
         with self.alpha(0.1, frame):
-            # Render G force in a circle
-
-            # Background Circle
-            self.circle(frame, origin, radius, (100, 100, 100), -1)
-
-            # Background outline
-            self.circle(frame, origin, radius, (200, 200, 200), 1)
-
-            # Outer Stroke
-            self.circle(frame, origin, int(radius * 0.65), (255, 255, 255), 1)
-
-            # Inner Stroke
-            self.circle(frame, origin, int(radius * 0.3), (255, 255, 255), 1)
-
-            # Crosshairs
-            self.line(frame,
-                        (radius + margin, self.from_bottom(2*radius + 35)),
-                        (radius + margin, self.from_bottom(35)),
-                        (255, 255, 255), 1)
-
-            self.line(frame,
-                      (margin, origin[1]),
-                      (2 * radius + margin, origin[1]),
-                      (255, 255, 255), 1)
-
-            # G-force ball
             lat_g = lap.get_lat_g_at_time(seconds_total_in)
             lin_g = lap.get_lin_g_at_time(seconds_total_in)
 
-            self.draw_gforce_ball(frame, origin, lat_g, lin_g)
+            self.render_g_meter(frame,
+                                origin, radius,
+                                (100, 100, 100),
+                                (200, 200, 200),
+                                (255, 255, 255),
+                                lat_g,
+                                lin_g)
 
             # Render MPH
             # Erg, first figure out MPH
@@ -192,89 +177,3 @@ class LikeHarrysRenderer(BaseRenderer):
         self.draw_map(frame, start_frame, framenum, lap)
 
         return frame
-
-    def draw_gforce_ball(self, frame, origin, latg, ling):
-        total_g = math.sqrt((latg * latg) + (ling * ling))
-        total_g_txt = "%6.2fg" % total_g
-
-        # TODO: Make this a bit more dynamic, bump it up if the
-        # video has morethan 2gs in it
-        max_g = 2.0
-
-        scale_lat = latg / max_g
-        scale_lin = ling / max_g
-
-        orig_x = origin[0] + (self.g_meter_size / max_g) * (-1 * scale_lat)
-        orig_y = origin[1] + (self.g_meter_size / max_g) * scale_lin
-
-        ball_origin = (int(orig_x), int(orig_y))
-
-        ball_color = (255, 255, 100)
-
-        self.circle(frame, ball_origin, self.g_meter_ball_size,
-                          ball_color, -1)
-
-        self.text(frame, total_g_txt,
-                        (ball_origin[0] - (self.g_meter_ball_size / 2) - 40,
-                         ball_origin[1] - (self.g_meter_ball_size)),
-                        cv2.FONT_HERSHEY_PLAIN, 1.5,
-                        (255, 255, 255), 1, cv2.CV_AA)
-
-
-
-    def draw_map(self, frame, start_frame, framenum, lap):
-        # Fuck me.
-        # Step 1, compute the GPS bounding box
-        bounds = lap.get_gps_bounds()
-        lat_range = bounds[1] - bounds[0]
-        long_range = bounds[3] - bounds[2]
-
-        gps_origin = (
-            # min_lat + half lat range = center of lat
-            (bounds[0] + (lat_range / 2)),
-            # min_long + half long range = center of long
-            (bounds[2] + (long_range / 2))
-        )
-
-
-        lat_scale_factor = self.map_width / lat_range
-        long_scale_factor = self.map_height / long_range
-
-        map_x = self.map_x
-        map_y = self.map_y
-
-        if map_x < 0:
-            map_x = self.video.width + self.map_x
-
-        if map_y < 0:
-            map_y = self.video.height + self.map_y
-
-
-        map_orig = (map_x - self.map_width / 2,
-                    map_y + (self.map_height / 2))
-
-        def get_point(fix=None, lat=None, lon=None):
-            if not lat and fix:
-                lat = fix.lat
-            if not lon and fix:
-                lon = fix.long
-
-            x = gps_origin[0] + ((lat - gps_origin[0]) * lat_scale_factor)
-            y = gps_origin[1] + ((lon - gps_origin[1]) * long_scale_factor)
-
-            x += map_orig[0]
-            y += map_orig[1]
-
-
-            return (int(x), int(y))
-
-        last_fix = lap.fixes[0]
-        for fix in lap.fixes[1:]:
-            cv2.line(frame, get_point(last_fix), get_point(fix), (255,255,255), 3, cv2.CV_AA)
-            last_fix = fix
-
-        frames_in = framenum - start_frame
-        seconds_total_in = frames_in / self.video.fps
-        # Now let's draw us!
-        (lat, lon) = lap.get_gps_at_time(seconds_total_in)
-        cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)

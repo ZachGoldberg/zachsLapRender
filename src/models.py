@@ -39,6 +39,7 @@ class Video(object):
         self.frame_offset = -28
         self.renderer = LikeHarrysRenderer(self)
         self._calc_times()
+        self.trackname = ""
 
     def file_basenames(self):
         return ",".join([os.path.basename(fn) for fn in self.filenames])
@@ -211,7 +212,6 @@ class Video(object):
             frames_writen = 0
             skipped = 0
 
-
             # Create a new videowriter file
             fourcc = cv2.cv.CV_FOURCC(*'XVID')
             out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
@@ -232,8 +232,8 @@ class Video(object):
                     rendered_frame = self.render_frame(frame, start_frame, t_framenum, lapinfo["lap"])
                     thread_results.insert(0, rendered_frame)
                     t_framenum += 1
-                    if t_framenum % 30 == 0:
-                        logger.debug("Rendered %s/%s frames..." % (t_framenum - start, end_frame - start))
+                    #if t_framenum % 30 == 0:
+                    #    logger.debug("Rendered %s/%s frames..." % (t_framenum - start, end_frame - start))
 
 
             worker_thread = Thread(target=render_thread, args=(framenum,))
@@ -241,7 +241,6 @@ class Video(object):
 
             while(oldcap.isOpened()):
                 framenum += 1
-                #ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
                     while len(thread_results) == 0:

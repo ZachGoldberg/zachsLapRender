@@ -1,7 +1,19 @@
 import cv2
+import math
+
 from contextlib import contextmanager
 
 class BaseRenderer(object):
+
+    def __init__(self, video):
+        self.g_meter_size = 200
+        self.g_meter_ball_size = 10
+        self.map_y = 150
+        self.map_x = -50
+        self.map_width = 300
+        self.map_height = 300
+        self.video = video
+
     def from_bottom(self, pixels):
         return self.video.height - pixels
 
@@ -131,3 +143,119 @@ class BaseRenderer(object):
 
         cv2.ellipse(src, (p4[0] + cornerRadius, p4[1] - cornerRadius),
                     (cornerRadius, cornerRadius), 90.0, 0, 90, lineColor, elipse_thickness, lineType );
+
+
+    def render_g_meter(self, frame, origin, radius,
+                        inner_color,
+                        frame_color,
+                        inner_line_color, lat_g, lin_g):
+        # Render G force in a circle
+        # Background Circle
+        self.circle(frame, origin, radius, inner_color, -1)
+
+        # Background outline
+        self.circle(frame, origin, radius, frame_color, 1)
+
+        # Outer Stroke
+        self.circle(frame, origin, int(radius * 0.65), inner_line_color, 1)
+
+        # Inner Stroke
+        self.circle(frame, origin, int(radius * 0.3), inner_line_color, 1)
+
+        # Crosshairs
+        self.line(frame,
+                  (origin[0], self.from_bottom(2*radius + 35)),
+                  (origin[0], self.from_bottom(35)),
+                  inner_line_color, 1)
+
+        self.line(frame,
+                  (origin[0] - radius, origin[1]),
+                  (origin[0] + radius, origin[1]),
+                  inner_line_color, 1)
+
+
+        self.draw_gforce_ball(frame, origin, lat_g, lin_g)
+
+    def draw_gforce_ball(self, frame, origin, latg, ling):
+        total_g = math.sqrt((latg * latg) + (ling * ling))
+        total_g_txt = "%6.2fg" % total_g
+
+        # TODO: Make this a bit more dynamic, bump it up if the
+        # video has morethan 2gs in it
+        max_g = 2.0
+
+        scale_lat = latg / max_g
+        scale_lin = ling / max_g
+
+        orig_x = origin[0] + (self.g_meter_size / max_g) * (-1 * scale_lat)
+        orig_y = origin[1] + (self.g_meter_size / max_g) * scale_lin
+
+        ball_origin = (int(orig_x), int(orig_y))
+
+        ball_color = (255, 255, 100)
+
+        self.circle(frame, ball_origin, self.g_meter_ball_size,
+                          ball_color, -1)
+
+        self.text(frame, total_g_txt,
+                        (ball_origin[0] - (self.g_meter_ball_size / 2) - 40,
+                         ball_origin[1] - (self.g_meter_ball_size)),
+                        cv2.FONT_HERSHEY_PLAIN, 1.5,
+                        (255, 255, 255), 1, cv2.CV_AA)
+
+
+    def draw_map(self, frame, start_frame, framenum, lap):
+        # Step 1, compute the GPS bounding box
+        bounds = lap.get_gps_bounds()
+        lat_range = bounds[1] - bounds[0]
+        long_range = bounds[3] - bounds[2]
+
+        gps_origin = (
+            # min_lat + half lat range = center of lat
+            (bounds[0] + (lat_range / 2)),
+            # min_long + half long range = center of long
+            (bounds[2] + (long_range / 2))
+        )
+
+
+        lat_scale_factor = self.map_width / lat_range
+        long_scale_factor = self.map_height / long_range
+
+        map_x = self.map_x
+        map_y = self.map_y
+
+        if map_x < 0:
+            map_x = self.video.width + self.map_x
+
+        if map_y < 0:
+            map_y = self.video.height + self.map_y
+
+
+        map_orig = (map_x - self.map_width / 2,
+                    map_y + (self.map_height / 2))
+
+        def get_point(fix=None, lat=None, lon=None):
+            if not lat and fix:
+                lat = fix.lat
+            if not lon and fix:
+                lon = fix.long
+
+            x = gps_origin[0] + ((lat - gps_origin[0]) * lat_scale_factor)
+            y = gps_origin[1] + ((lon - gps_origin[1]) * long_scale_factor)
+
+            x += map_orig[0]
+            y += map_orig[1]
+
+
+            return (int(x), int(y))
+
+        last_fix = lap.fixes[0]
+        for fix in lap.fixes[1:]:
+            cv2.line(frame, get_point(last_fix), get_point(fix), (255,255,255), 3, cv2.CV_AA)
+            last_fix = fix
+
+        frames_in = framenum - start_frame
+        seconds_total_in = frames_in / self.video.fps
+        # Now let's draw us!
+        (lat, lon) = lap.get_gps_at_time(seconds_total_in)
+        cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)
