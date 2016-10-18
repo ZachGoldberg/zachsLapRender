@@ -59,20 +59,21 @@ class LikeHarrysRenderer(BaseRenderer):
         cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 255, 255), 1, cv2.CV_AA)
 
-        # Render G force in a circle
-        # Background Circle
-        with self.alpha(0.2, frame):
+        with self.alpha(0.1, frame):
+            # Render G force in a circle
+
+            # Background Circle
             self.circle(frame, origin, radius, (100, 100, 100), -1)
 
             # Background outline
             self.circle(frame, origin, radius, (200, 200, 200), 1)
 
-        with self.alpha(0.1, frame):
             # Outer Stroke
             self.circle(frame, origin, int(radius * 0.65), (255, 255, 255), 1)
 
             # Inner Stroke
             self.circle(frame, origin, int(radius * 0.3), (255, 255, 255), 1)
+
             # Crosshairs
             self.line(frame,
                         (radius + margin, self.from_bottom(2*radius + 35)),

@@ -25,7 +25,7 @@ class DualRenderer(BaseRenderer):
         self.renderer = subrenderer
 
 
-    def render_laps(self, outputdir):
+    def render_laps(self, outputdir, show_video=False):
         #self.video1.frame_offset = -28
         #self.video2.frame_offset = -34
 
@@ -145,8 +145,9 @@ class DualRenderer(BaseRenderer):
             merged_frame = self.merge_frames(frame1, frame2)
             out.write(merged_frame)
 
-            cv2.imshow('frame', merged_frame)
-            keypress = cv2.waitKey(1)
+            if show_video:
+                cv2.imshow('frame', merged_frame)
+                keypress = cv2.waitKey(1)
 
             if framenum1 > end_frame1 and framenum2 > end_frame2:
                 break

@@ -70,6 +70,10 @@ def build_parser():
                         dest="lap_comparison", action='store_true',
                         help="Render 2 laps one ontop of the other")
 
+    parser.add_argument("-r", "--show-video-during-rendering",
+                        dest="show_video", action='store_true',
+                        help="Show the video during the rendering process.  Slows down rendering a little bit.")
+
 
     return parser
 
@@ -195,7 +199,7 @@ if __name__ == '__main__':
         from renderers.dual import DualRenderer
         from renderers.likeharrys import LikeHarrysRenderer
         dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-        split_video = dr.render_laps(args.outputdir or "/tmp/")
+        split_video = dr.render_laps(args.outputdir or "/tmp/", args.show_video)
         video_id = youtube.upload_video(split_video)
         print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
     else:
@@ -203,7 +207,7 @@ if __name__ == '__main__':
         # we've discovered.
         # Then we'll write small bits to each of those, and build from there
         for video in matched_videos:
-            lapvideos = video.render_laps(args.outputdir or "/tmp/")
+            lapvideos = video.render_laps(args.outputdir or "/tmp/", args.show_video)
             for lapvideo in lapvideos:
                 video_id = youtube.upload_video(lapvideo)
                 print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id

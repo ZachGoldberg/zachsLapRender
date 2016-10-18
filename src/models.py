@@ -175,7 +175,7 @@ class Video(object):
     def renderable_laps(self):
         return [m for m in self.matched_laps if m['render']]
 
-    def render_laps(self, outputdir):
+    def render_laps(self, outputdir, show_video=False):
         lapvideos = []
 
         for lapinfo in self.matched_laps:
@@ -225,8 +225,10 @@ class Video(object):
                 if framenum >= start_frame and framenum <= end_frame:
                     rendered_frame = self.render_frame(frame, start_frame, framenum, lapinfo["lap"])
                     out.write(rendered_frame)
-                    cv2.imshow('frame', rendered_frame)
-                    keypress = cv2.waitKey(1)
+
+                    if show_video:
+                        cv2.imshow('frame', rendered_frame)
+                        keypress = cv2.waitKey(1)
 
                     frames_writen += 1
                     if frames_writen % 30 == 0:
