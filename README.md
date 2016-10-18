@@ -18,7 +18,8 @@ Requirements:
 
 TODO:
  - Calculate lap complete % by distance travelled, then show in line mariokart style
- - Use a with self.alpha() for rendering efficiency to avoid multiple blends
+ - Threaded renderer -- one thread writing frames to the buffer and a threadpool of N threads rendering overlay
+
  - Two laps side by side!
  - Couple of seconds before and after video
  - Show filename and lap number in screen

@@ -20,6 +20,7 @@ class LikeHarrysRenderer(BaseRenderer):
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
 
+
         # See if we have any vmin/vmax annotations
         speedinfo = lap.get_nearest_speed_direction_change(
             seconds_total_in)
@@ -58,6 +59,8 @@ class LikeHarrysRenderer(BaseRenderer):
         txt = "Rendered by zachsLapRenderer"
         cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 255, 255), 1, cv2.CV_AA)
+
+
 
         with self.alpha(0.1, frame):
             # Render G force in a circle
@@ -138,7 +141,6 @@ class LikeHarrysRenderer(BaseRenderer):
                             cv2.FONT_HERSHEY_PLAIN, 2.5,
                             (255, 255, 255), 2, cv2.CV_AA)
 
-
         def render_metric_direction_change(
                 metricinfo, metric_text_func, metric_duration, metric_fade, render_pos):
 
@@ -169,6 +171,7 @@ class LikeHarrysRenderer(BaseRenderer):
 
         def brake_text(metricinfo):
             return "Max Braking Gs:  %4.2f" % metricinfo['metric']
+
 
         render_metric_direction_change(speedinfo, speed_text, METRIC_APEX_DURATION,
                                        METRIC_APEX_FADE, (200, 200))
