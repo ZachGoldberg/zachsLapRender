@@ -5,6 +5,7 @@ import os
 import pytz
 import settings
 import subprocess
+import time
 import tzlocal
 import wave
 
@@ -216,6 +217,7 @@ class Video(object):
 
             logger.debug("Seeking to lap start at %s ..." % framenum)
             oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
+            last_time = time.time()
             while(oldcap.isOpened()):
                 framenum += 1
                 ret, frame = oldcap.read()
@@ -228,7 +230,10 @@ class Video(object):
 
                     frames_writen += 1
                     if frames_writen % 30 == 0:
-                        logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
+                        delta = time.time() - last_time
+                        last_time = time.time()
+                        logger.debug("Written %s/%s frames, %s fps..." % (frames_writen, total_frames,
+                                                                          (30 / delta)))
                 else:
                     skipped += 1
                     if skipped % 100 == 0:

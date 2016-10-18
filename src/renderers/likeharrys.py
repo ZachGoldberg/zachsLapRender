@@ -20,87 +20,6 @@ class LikeHarrysRenderer(BaseRenderer):
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
 
-
-        # Render watermark
-        txt = "Rendered by zachsLapRenderer"
-        cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
-                    (255, 255, 255), 1, cv2.CV_AA)
-
-        # Render G force in a circle
-        # Background Circle
-        margin = 5
-        meter_width = 200
-        radius = self.g_meter_size / 2
-        origin = (radius + margin, self.from_bottom(radius + 35))
-        self.alpha_circle(frame, origin, radius, (100, 100, 100), -1, alpha=0.2)
-
-        # Background outline
-        self.alpha_circle(frame, origin, radius, (200, 200, 200), 1, alpha=0.2)
-        # Outer Stroke
-        self.alpha_circle(frame, origin, int(radius * 0.65), (255, 255, 255), 1, alpha=0.1)
-        # Inner Stroke
-        self.alpha_circle(frame, origin, int(radius * 0.3), (255, 255, 255), 1, alpha=0.1)
-        # Crosshairs
-        self.alpha_line(frame,
-                        (radius + margin, self.from_bottom(2*radius + 35)),
-                        (radius + margin, self.from_bottom(35)),
-                        (255, 255, 255), 1, alpha=0.1)
-        self.alpha_line(frame,
-                        (margin, origin[1]),
-                        (2 * radius + margin, origin[1]),
-                        (255, 255, 255), 1, alpha=0.1)
-
-        # G-force ball
-        lat_g = lap.get_lat_g_at_time(seconds_total_in)
-        lin_g = lap.get_lin_g_at_time(seconds_total_in)
-
-        self.draw_gforce_ball(frame, origin, lat_g, lin_g)
-
-        # Render MPH
-        # Erg, first figure out MPH
-        mph = lap.get_mph_at_time(seconds_total_in)
-        mph_txt = "%3.0f mph" % mph
-        g_meter_right_edge = (margin + radius * 2)
-        topLeft = [(margin + g_meter_right_edge),
-                   self.from_bottom(40 + 60)]
-        bottomRight = [(margin + g_meter_right_edge + meter_width),
-                       self.from_bottom(40)]
-        self.alpha_rounded_rectangle(frame,
-                                     topLeft, bottomRight,
-                                     (255, 255, 255),
-                                     1,
-                                     cv2.CV_AA,
-                                     10, 0.1,
-                                     fill=True,
-                                     fillColor=(50, 50, 50))
-
-        self.alpha_text(frame, mph_txt,
-                        (topLeft[0] + margin * 3,
-                         self.from_bottom(55)),
-                        cv2.FONT_HERSHEY_PLAIN, 2.5,
-                        (255, 255, 255), 2, cv2.CV_AA, 0.1)
-
-        topLeft = [(margin + g_meter_right_edge),
-                   self.from_bottom(110 + margin + 60)]
-        bottomRight = [(margin + g_meter_right_edge + meter_width),
-                       self.from_bottom(110)]
-
-        self.alpha_rounded_rectangle(frame,
-                                     topLeft, bottomRight,
-                                     (255, 255, 255),
-                                     1,
-                                     cv2.CV_AA,
-                                     10, 0.1,
-                                     fill=True,
-                                     fillColor=(50, 50, 50))
-
-        txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
-        self.alpha_text(frame, txt,
-                        (topLeft[0] + margin * 3,
-                         self.from_bottom(130)),
-                        cv2.FONT_HERSHEY_PLAIN, 2.5,
-                        (255, 255, 255), 2, cv2.CV_AA, 0.1)
-
         # See if we have any vmin/vmax annotations
         speedinfo = lap.get_nearest_speed_direction_change(
             seconds_total_in)
@@ -122,6 +41,103 @@ class LikeHarrysRenderer(BaseRenderer):
 
         start_fade = METRIC_APEX_DURATION - METRIC_APEX_FADE
 
+        # Margin between widgets on the bottom
+        margin = 5
+
+        # Width of the MPH / Laptime meter
+        meter_width = 200
+
+        # Radius of g-meter
+        radius = self.g_meter_size / 2
+
+        # g-meter origin
+        origin = (radius + margin, self.from_bottom(radius + 35))
+
+
+        # Render watermark
+        txt = "Rendered by zachsLapRenderer"
+        cv2.putText(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
+                    (255, 255, 255), 1, cv2.CV_AA)
+
+        # Render G force in a circle
+        # Background Circle
+        with self.alpha(0.2, frame):
+            self.circle(frame, origin, radius, (100, 100, 100), -1)
+
+            # Background outline
+            self.circle(frame, origin, radius, (200, 200, 200), 1)
+
+        with self.alpha(0.1, frame):
+            # Outer Stroke
+            self.circle(frame, origin, int(radius * 0.65), (255, 255, 255), 1)
+
+            # Inner Stroke
+            self.circle(frame, origin, int(radius * 0.3), (255, 255, 255), 1)
+            # Crosshairs
+            self.line(frame,
+                        (radius + margin, self.from_bottom(2*radius + 35)),
+                        (radius + margin, self.from_bottom(35)),
+                        (255, 255, 255), 1)
+
+            self.line(frame,
+                      (margin, origin[1]),
+                      (2 * radius + margin, origin[1]),
+                      (255, 255, 255), 1)
+
+            # G-force ball
+            lat_g = lap.get_lat_g_at_time(seconds_total_in)
+            lin_g = lap.get_lin_g_at_time(seconds_total_in)
+
+            self.draw_gforce_ball(frame, origin, lat_g, lin_g)
+
+            # Render MPH
+            # Erg, first figure out MPH
+            mph = lap.get_mph_at_time(seconds_total_in)
+            mph_txt = "%3.0f mph" % mph
+            g_meter_right_edge = (margin + radius * 2)
+            topLeft = [(margin + g_meter_right_edge),
+                       self.from_bottom(40 + 60)]
+            bottomRight = [(margin + g_meter_right_edge + meter_width),
+                           self.from_bottom(40)]
+
+
+            self.rounded_rectangle(frame,
+                                   topLeft, bottomRight,
+                                   (255, 255, 255),
+                                   1,
+                                   cv2.CV_AA,
+                                   10,
+                                   fill=True,
+                                   fillColor=(50, 50, 50))
+
+            self.text(frame, mph_txt,
+                      (topLeft[0] + margin * 3,
+                       self.from_bottom(55)),
+                      cv2.FONT_HERSHEY_PLAIN, 2.5,
+                      (255, 255, 255), 2, cv2.CV_AA)
+
+            topLeft = [(margin + g_meter_right_edge),
+                       self.from_bottom(110 + margin + 60)]
+            bottomRight = [(margin + g_meter_right_edge + meter_width),
+                           self.from_bottom(110)]
+
+            self.rounded_rectangle(frame,
+                                   topLeft, bottomRight,
+                                   (255, 255, 255),
+                                   1,
+                                   cv2.CV_AA,
+                                   10,
+                                   fill=True,
+                                   fillColor=(50, 50, 50))
+
+            txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+            self.text(frame, txt,
+                            (topLeft[0] + margin * 3,
+                             self.from_bottom(130)),
+                            cv2.FONT_HERSHEY_PLAIN, 2.5,
+                            (255, 255, 255), 2, cv2.CV_AA)
+
+
         def render_metric_direction_change(
                 metricinfo, metric_text_func, metric_duration, metric_fade, render_pos):
 
@@ -130,19 +146,15 @@ class LikeHarrysRenderer(BaseRenderer):
                 if seconds_since_metric < METRIC_APEX_DURATION:
                     text = metric_text_func(metricinfo)
                     if seconds_since_metric < start_fade:
-                        cv2.putText(frame, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
-                                    (255, 255, 255), 2, cv2.CV_AA)
+                        self.text(frame, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
+                                  (255, 255, 255), 2, cv2.CV_AA)
                     else:
                         # Do some fun alpha fading
                         time_since_fade_start = seconds_since_metric - start_fade
 
-                        alpha = 1 - (time_since_fade_start / METRIC_APEX_FADE)
-                        beta = 1 - alpha
-                        gamma = 0
-                        overlay = frame.copy()
-                        cv2.putText(overlay, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
-                                    (255, 255, 255), 2, cv2.CV_AA)
-                        cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
+                        alpha = (time_since_fade_start / METRIC_APEX_FADE)
+                        self.alpha_text(frame, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
+                                        (255, 255, 255), 2, cv2.CV_AA, alpha)
 
 
         def speed_text(metricinfo):
@@ -195,14 +207,14 @@ class LikeHarrysRenderer(BaseRenderer):
 
         ball_color = (255, 255, 100)
 
-        self.alpha_circle(frame, ball_origin, self.g_meter_ball_size,
-                          ball_color, -1, alpha=0.1)
+        self.circle(frame, ball_origin, self.g_meter_ball_size,
+                          ball_color, -1)
 
-        self.alpha_text(frame, total_g_txt,
+        self.text(frame, total_g_txt,
                         (ball_origin[0] - (self.g_meter_ball_size / 2) - 40,
                          ball_origin[1] - (self.g_meter_ball_size)),
                         cv2.FONT_HERSHEY_PLAIN, 1.5,
-                        (255, 255, 255), 1, cv2.CV_AA, 0.1)
+                        (255, 255, 255), 1, cv2.CV_AA)
 
 
 

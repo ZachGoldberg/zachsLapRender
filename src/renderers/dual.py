@@ -4,6 +4,7 @@ import math
 import numpy as np
 import os
 import subprocess
+import time
 
 from threading import Thread
 
@@ -92,12 +93,18 @@ class DualRenderer(BaseRenderer):
 
         frame1 = None
         frame2 = None
+
+        last_time = time.time()
+
         while(cap1.isOpened() or cap2.isOpened()):
             framenum1 += 1
             framenum2 += 1
             frames_writen += 1
             if frames_writen % 30 == 0:
-                logger.debug("Written %s/%s frames..." % (frames_writen, total_frames))
+                delta = time.time() - last_time
+                last_time = time.time()
+                logger.debug("Written %s/%s frames, %s fps..." % (frames_writen, total_frames,
+                                                                  (30 / delta)))
 
             thread1 = None
             thread2 = None

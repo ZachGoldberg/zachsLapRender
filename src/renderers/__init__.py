@@ -1,4 +1,5 @@
 import cv2
+from contextlib import contextmanager
 
 class BaseRenderer(object):
     def from_bottom(self, pixels):
@@ -7,13 +8,28 @@ class BaseRenderer(object):
     def from_right(self, pixels):
         return self.video.width - pixels
 
+    @contextmanager
+    def alpha(self, alpha, frame):
+        beta = 1 - alpha
+        gamma = 0
+        overlay = frame.copy()
+        yield
+        cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
     def alpha_circle(self, frame, origin, radius, color, thickness=1, lineType=8, shift=0, alpha=0):
         beta = 1 - alpha
         gamma = 0
         overlay = frame.copy()
         cv2.circle(frame, origin, radius, color, thickness, lineType, shift)
-        cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
+
+    def circle(self, frame, origin, radius, color, thickness=1, lineType=8, shift=0):
+        cv2.circle(frame, origin, radius, color, thickness, lineType, shift)
+
+    def line(self, frame, start, fin, color, thickness, lineType=8, shift=0):
+        cv2.line(frame, start, fin, color, thickness, lineType, shift)
+
+    def text(self, frame, txt, origin, font, size, color, stroke, linetype):
+        cv2.putText(frame, txt, origin, font, size, color, stroke, linetype)
 
     def alpha_line(self, frame, start, fin, color, thickness, lineType=8, shift=0, alpha=0):
         beta = 1 - alpha
@@ -30,15 +46,23 @@ class BaseRenderer(object):
         cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
 
+    def rounded_rectangle(self, frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, fill=False, fillColor=None):
+        if fill:
+            self._rounded_rectangle(frame, topLeft, bottomRight, fillColor, thickness, lineType, cornerRadius, fill, fillColor)
+            self._rounded_rectangle(frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, False)
+        else:
+            self._rounded_rectangle(frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, fill, fillColor)
+
+
     def alpha_rounded_rectangle(self, frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, alpha, fill=False, fillColor=None):
         beta = 1 - alpha
         gamma = 0
         overlay = frame.copy()
         if fill:
-            self.rounded_rectangle(frame, topLeft, bottomRight, fillColor, thickness, lineType, cornerRadius, fill, fillColor)
-            self.rounded_rectangle(frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, False)
+            self._rounded_rectangle(frame, topLeft, bottomRight, fillColor, thickness, lineType, cornerRadius, fill, fillColor)
+            self._rounded_rectangle(frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, False)
         else:
-            self.rounded_rectangle(frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, fill, fillColor)
+            self._rounded_rectangle(frame, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, fill, fillColor)
 
         cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
@@ -50,7 +74,7 @@ class BaseRenderer(object):
 
     From http://stackoverflow.com/questions/18973103/how-to-draw-a-rounded-rectangle-rectangle-with-rounded-corners-with-opencv
     """
-    def rounded_rectangle(self, src, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, fill, fillColor=None):
+    def _rounded_rectangle(self, src, topLeft, bottomRight, lineColor, thickness, lineType, cornerRadius, fill, fillColor=None):
         # corners:
         # p1 - p2
         # |     |

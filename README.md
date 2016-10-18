@@ -17,6 +17,8 @@ Requirements:
 
 
 TODO:
+ - Calculate lap complete % by distance travelled, then show in line mariokart style
+ - Use a with self.alpha() for rendering efficiency to avoid multiple blends
  - Two laps side by side!
  - Couple of seconds before and after video
  - Show filename and lap number in screen
