@@ -220,56 +220,41 @@ class Video(object):
             oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             last_time = time.time()
 
-            n_threads = 2
-            thread_results = {}
-            threads = {}
-            frames = {}
-            def read_thread():
-                t_framenum = framenum
-                while t_framenum < end_frame:
-                    ret, frame = oldcap.read()
-                    frames[t_framenum] = frame
-                    t_framenum += 1
-
-
-            def render_thread(start, skip):
+            thread_results = []
+            def render_thread(start):
                 t_framenum = start
                 while t_framenum <= end_frame:
+                    while len(thread_results) > 100:
+                        time.sleep(.1)
 
-                    frame = None
-                    while frame is None:
-                        time.sleep(0.001)
-                        frame = frames.get(t_framenum)
+                    ret, frame = oldcap.read()
 
                     rendered_frame = self.render_frame(frame, start_frame, t_framenum, lapinfo["lap"])
-                    thread_results[t_framenum] = rendered_frame
-                    t_framenum += skip
+                    thread_results.insert(0, rendered_frame)
+                    t_framenum += 1
+                    if t_framenum % 30 == 0:
+                        logger.debug("Rendered %s/%s frames..." % (t_framenum - start, end_frame - start))
 
-            threads[n_threads + 1] = Thread(target=read_thread)
-            print "Starting frame reader thread..."
-            threads[n_threads + 1].start()
 
-            print "Starting worker threads..."
-
-            for i in range(n_threads):
-                threads[i] = Thread(target=render_thread, args=(framenum + i, n_threads))
-                threads[i].start()
+            worker_thread = Thread(target=render_thread, args=(framenum,))
+            worker_thread.start()
 
             while(oldcap.isOpened()):
                 framenum += 1
                 #ret, frame = oldcap.read()
 
                 if framenum >= start_frame and framenum <= end_frame:
-                    while thread_results.get(framenum) is None:
-                        time.sleep(.001)
+                    while len(thread_results) == 0:
+                        time.sleep(0.1)
 
-                    out.write(thread_results.get(framenum))
-
-                    del thread_results[framenum]
+                    rendered_frame = thread_results.pop()
+                    out.write(rendered_frame)
 
                     if show_video:
                         cv2.imshow('frame', rendered_frame)
                         keypress = cv2.waitKey(1)
+
+                    rendered_frame = None
 
                     frames_writen += 1
                     if frames_writen % 30 == 0:
