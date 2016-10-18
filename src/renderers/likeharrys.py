@@ -49,7 +49,6 @@ class LikeHarrysRenderer(BaseRenderer):
         # g-meter origin
         origin = (radius + margin, self.from_bottom(radius + 35))
 
-
         # Render watermark
         txt = "Rendered by zachsLapRenderer"
         self.text(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
@@ -88,8 +87,6 @@ class LikeHarrysRenderer(BaseRenderer):
                        self.from_bottom(40 + 60)]
             bottomRight = [(margin + g_meter_right_edge + meter_width),
                            self.from_bottom(40)]
-
-
             self.rounded_rectangle(frame,
                                    topLeft, bottomRight,
                                    (255, 255, 255),
@@ -126,52 +123,66 @@ class LikeHarrysRenderer(BaseRenderer):
                             cv2.FONT_HERSHEY_PLAIN, 2.5,
                             (255, 255, 255), 2, cv2.CV_AA)
 
-        def render_metric_direction_change(
-                metricinfo, metric_text_func, metric_duration, metric_fade, render_pos):
 
-            if metricinfo:
-                seconds_since_metric = seconds_total_in - metricinfo['seconds']
-                if seconds_since_metric < METRIC_APEX_DURATION:
-                    text = metric_text_func(metricinfo)
-                    if seconds_since_metric < start_fade:
-                        self.text(frame, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
-                                  (255, 255, 255), 2, cv2.CV_AA)
-                    else:
-                        # Do some fun alpha fading
-                        time_since_fade_start = seconds_since_metric - start_fade
 
-                        alpha = (time_since_fade_start / METRIC_APEX_FADE)
-                        self.alpha_text(frame, text, render_pos, cv2.FONT_HERSHEY_PLAIN, 4,
-                                        (255, 255, 255), 2, cv2.CV_AA, alpha)
+        def render_metric_direction_change(metricinfo, metric_text_func,
+                                           metric_duration, metric_fade, render_pos):
+            if not metricinfo:
+                return
+            seconds_since_metric = seconds_total_in - metricinfo['seconds']
+            if seconds_since_metric < METRIC_APEX_DURATION or True:
+                text = metric_text_func(metricinfo)
+                alpha = 0
+                if seconds_since_metric > start_fade:
+                    time_since_fade_start = seconds_since_metric - start_fade
+                    alpha = (time_since_fade_start / METRIC_APEX_FADE)
+
+                with self.alpha(alpha, frame):
+                    topLeft = (render_pos[0] - 10, render_pos[1] - 40)
+                    bottomRight = (render_pos[0] + 10 + 24 * len(text), render_pos[1] + 10)
+
+                    self.rounded_rectangle(frame,
+                                           topLeft, bottomRight,
+                                           (255, 255, 255),
+                                           1,
+                                           cv2.CV_AA,
+                                           10,
+                                           fill=True,
+                                           fillColor=(50, 50, 50))
+
+                    self.text(frame, text, (render_pos[0] + 10, render_pos[1]),
+                              cv2.FONT_HERSHEY_PLAIN, 2.5,
+                              (255, 255, 255), 2, cv2.CV_AA)
 
 
         def speed_text(metricinfo):
             if metricinfo['direction'] == 1:
-                return "Straight %6.2f mph" % metricinfo['metric']
+                return "Straight %5.2f mph" % metricinfo['metric']
             else:
-                return "Corner %6.2f mph" % metricinfo['metric']
+                return "Corner %5.2f mph" % metricinfo['metric']
 
         def corner_text(metricinfo):
-            return "Max Corner Gs:  %4.2f" % metricinfo['metric']
+            return "Corner Gs:  %4.2f" % metricinfo['metric']
 
         def brake_text(metricinfo):
-            return "Max Braking Gs:  %4.2f" % metricinfo['metric']
+            return "Braking Gs:  %4.2f" % metricinfo['metric']
 
 
         render_metric_direction_change(speedinfo, speed_text, METRIC_APEX_DURATION,
-                                       METRIC_APEX_FADE, (200, 200))
+                                       METRIC_APEX_FADE, (0, 100))
 
-        if (cornerinfo and
-            abs(cornerinfo['metric']) > MIN_APEX_CORNER_G):
-            render_metric_direction_change(cornerinfo, corner_text, METRIC_APEX_DURATION,
-                                           METRIC_APEX_FADE, (200, 250))
+        # TODO: Show this on G-Map, not in Text
+        #if (cornerinfo and
+        #    abs(cornerinfo['metric']) > MIN_APEX_CORNER_G):
+        #    render_metric_direction_change(cornerinfo, corner_text, METRIC_APEX_DURATION,
+        #                                   METRIC_APEX_FADE, (0, 150))
 
 
-        if (brakeinfo and
-            brakeinfo['direction'] == -1 and
-            brakeinfo['metric'] < MIN_BRAKE_G):
-            render_metric_direction_change(brakeinfo, brake_text, METRIC_APEX_DURATION,
-                                           METRIC_APEX_FADE, (200, 300))
+        #if (brakeinfo and
+        #    brakeinfo['direction'] == -1 and
+        #    brakeinfo['metric'] < MIN_BRAKE_G):
+        #    render_metric_direction_change(brakeinfo, brake_text, METRIC_APEX_DURATION,
+        #                                   METRIC_APEX_FADE, (0, 200))
 
 
         self.draw_map(frame, start_frame, framenum, lap)

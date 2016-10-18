@@ -22,11 +22,13 @@ class BaseRenderer(object):
 
     @contextmanager
     def alpha(self, alpha, frame):
-        beta = 1 - alpha
-        gamma = 0
-        overlay = frame.copy()
+        if alpha != 0:
+            beta = 1 - alpha
+            gamma = 0
+            overlay = frame.copy()
         yield
-        cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
+        if alpha != 0:
+            cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
     def alpha_circle(self, frame, origin, radius, color, thickness=1, lineType=8, shift=0, alpha=0):
         beta = 1 - alpha
