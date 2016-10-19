@@ -60,9 +60,9 @@ class LikeHarrysRenderer(BaseRenderer):
         distance = lap.get_distance_at_time(seconds_total_in)
         t_distance = lap.total_distance
         dist_perc = distance / t_distance
-        txt = "%.2f of %.2f, %.2f%%" % (distance, t_distance, dist_perc)
+        txt = "%.3f%%" % dist_perc
         self.text(frame, txt,
-                  (200, 100), cv2.FONT_HERSHEY_PLAIN, 3,
+                  (550, 100), cv2.FONT_HERSHEY_PLAIN, 3,
                   (255, 255, 255), 2, cv2.CV_AA)
 
         # Render lap info
@@ -154,7 +154,7 @@ class LikeHarrysRenderer(BaseRenderer):
 
                 with self.alpha(alpha, frame):
                     topLeft = (render_pos[0] - 10, render_pos[1] - 40)
-                    bottomRight = (render_pos[0] + 10 + 24 * len(text), render_pos[1] + 10)
+                    bottomRight = (render_pos[0] + 15 + 24 * len(text), render_pos[1] + 10)
 
                     self.rounded_rectangle(frame,
                                            topLeft, bottomRight,
@@ -172,9 +172,9 @@ class LikeHarrysRenderer(BaseRenderer):
 
         def speed_text(metricinfo):
             if metricinfo['direction'] == 1:
-                return "Straight %5.2f mph" % metricinfo['metric']
+                return "Straight %d mph" % metricinfo['metric']
             else:
-                return "Corner %5.2f mph" % metricinfo['metric']
+                return "Corner %d mph" % metricinfo['metric']
 
         def corner_text(metricinfo):
             return "Corner Gs:  %4.2f" % metricinfo['metric']

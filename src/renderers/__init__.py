@@ -14,6 +14,8 @@ class BaseRenderer(object):
         self.map_height = 300
         self.video = video
 
+        self.enable_map = True
+
     def from_bottom(self, pixels):
         return self.video.height - pixels
 
@@ -206,7 +208,7 @@ class BaseRenderer(object):
                         (255, 255, 255), 1, cv2.CV_AA)
 
 
-    def draw_map(self, frame, start_frame, framenum, lap):
+    def _map_data(self, lap):
         # Step 1, compute the GPS bounding box
         bounds = lap.get_gps_bounds()
         lat_range = bounds[1] - bounds[0]
@@ -232,32 +234,49 @@ class BaseRenderer(object):
         if map_y < 0:
             map_y = self.video.height + self.map_y
 
-
-        map_orig = (map_x - self.map_width / 2,
+        map_origin = (map_x - self.map_width / 2,
                     map_y + (self.map_height / 2))
 
-        def get_point(fix=None, lat=None, lon=None):
-            if not lat and fix:
-                lat = fix.lat
-            if not lon and fix:
-                lon = fix.long
+        return gps_origin, map_origin, (lat_scale_factor, long_scale_factor)
 
-            x = gps_origin[0] + ((lat - gps_origin[0]) * lat_scale_factor)
-            y = gps_origin[1] + ((lon - gps_origin[1]) * long_scale_factor)
+    def draw_map(self, frame, start_frame, framenum, lap):
+        if not self.enable_map:
+            return frame
 
-            x += map_orig[0]
-            y += map_orig[1]
-
-
-            return (int(x), int(y))
+        gps_origin, map_origin, scales = self._map_data(lap)
 
         last_fix = lap.fixes[0]
         for fix in lap.fixes[1:]:
-            cv2.line(frame, get_point(last_fix), get_point(fix), (255,255,255), 3, cv2.CV_AA)
+            cv2.line(frame,
+                     self._get_map_point(gps_origin, map_origin, scales, last_fix),
+                     self._get_map_point(gps_origin, map_origin, scales, fix),
+                     (255,255,255), 3, cv2.CV_AA)
+
             last_fix = fix
+
+        self.draw_map_ball(frame, start_frame, framenum, lap)
+
+    def _get_map_point(self, gps_origin, map_origin, scales, fix=None, lat=None, lon=None):
+        if not lat and fix:
+            lat = fix.lat
+        if not lon and fix:
+            lon = fix.long
+
+        x = gps_origin[0] + ((lat - gps_origin[0]) * scales[0])
+        y = gps_origin[1] + ((lon - gps_origin[1]) * scales[1])
+
+        x += map_origin[0]
+        y += map_origin[1]
+
+
+        return (int(x), int(y))
+
+    def draw_map_ball(self, frame, start_frame, framenum, lap, ballcolor=(255, 255, 100)):
+        # Now let's draw us!
+        gps_origin, map_origin, scales = self._map_data(lap)
 
         frames_in = framenum - start_frame
         seconds_total_in = frames_in / self.video.fps
-        # Now let's draw us!
+
         (lat, lon) = lap.get_gps_at_time(seconds_total_in)
-        cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)
+        cv2.circle(frame, self._get_map_point(gps_origin, map_origin, scales, None, lat, lon), 10, ballcolor, -1)

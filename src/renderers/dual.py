@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 class DualRenderer(BaseRenderer):
     def __init__(self, video1, video2, subrenderer):
+        super(DualRenderer, self).__init__(video1)
+
         # TODO: Check that we have a total of only
         # 2 laps marked as renderable
         self.video1 = video1
@@ -22,8 +24,20 @@ class DualRenderer(BaseRenderer):
             video2 = video1
 
         self.video2 = video2
+
         self.renderer = subrenderer
 
+        self.video1.renderer = self.renderer(self.video1)
+        self.video1.renderer.enable_map = False
+
+        self.video2.renderer = self.renderer(self.video2)
+        self.video2.renderer.enable_map = False
+
+        self.map_width = self.video1.width * 0.9
+        self.map_height = self.video.height * 0.9
+
+        self.map_y = 200
+        self.map_x = self.map_width
 
     def render_laps(self, outputdir, show_video=False):
         #self.video1.frame_offset = -28
@@ -143,6 +157,11 @@ class DualRenderer(BaseRenderer):
                 frame2 = t2val['frame']
 
             merged_frame = self.merge_frames(frame1, frame2)
+            self.render_frame(merged_frame,
+                              (start_frame1, start_frame2),
+                              (framenum1, framenum2),
+                              (lapinfo1['lap'], lapinfo2['lap']))
+
             out.write(merged_frame)
 
             if show_video:
@@ -179,6 +198,19 @@ class DualRenderer(BaseRenderer):
 
         logger.debug("Finished with %s" % final_newfname)
         return final_newfname
+
+
+    def render_frame(self, frame,
+                     starts,
+                     framenums,
+                     laps):
+
+        with self.alpha(0.5, frame):
+            self.draw_map(frame, starts[0], framenums[0], laps[0])
+            self.draw_map(frame, starts[1], framenums[1], laps[1])
+
+            self.draw_map_ball(frame, starts[0], framenums[0], laps[0])
+            self.draw_map_ball(frame, starts[1], framenums[1], laps[1], (255, 150, 100))
 
     def merge_frames(self, frame1, frame2):
 
