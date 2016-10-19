@@ -205,12 +205,38 @@ class DualRenderer(BaseRenderer):
                      framenums,
                      laps):
 
+        color1 = (255, 255, 100)
+        color2 = (255, 150, 100)
+
+        seconds_in1 = (framenums[0] - starts[0]) / self.video1.fps
+        seconds_in2 = (framenums[1] - starts[1]) / self.video2.fps
+
+        distance1 = laps[0].get_distance_at_time(seconds_in1)
+        t_distance1 = laps[0].total_distance
+        dist_perc1 = distance1 / t_distance1
+
+        distance2 = laps[1].get_distance_at_time(seconds_in2)
+        t_distance2 = laps[1].total_distance
+        dist_perc2 = distance2 / t_distance2
+
+
         with self.alpha(0.5, frame):
             self.draw_map(frame, starts[0], framenums[0], laps[0])
             self.draw_map(frame, starts[1], framenums[1], laps[1])
 
-            self.draw_map_ball(frame, starts[0], framenums[0], laps[0])
-            self.draw_map_ball(frame, starts[1], framenums[1], laps[1], (255, 150, 100))
+            # Draw the leading ball first
+            if distance1 > distance2:
+                self.draw_map_ball(frame, starts[1], framenums[1], laps[1], color2)
+                self.draw_map_ball(frame, starts[0], framenums[0], laps[0], color1)
+            else:
+                self.draw_map_ball(frame, starts[0], framenums[0], laps[0], color1)
+                self.draw_map_ball(frame, starts[1], framenums[1], laps[1], color2)
+
+        #txt = "%.3f%%" % dist_perc
+        #self.text(frame, txt,
+        #          (550, 100), cv2.FONT_HERSHEY_PLAIN, 3,
+        #          (255, 255, 255), 2, cv2.CV_AA)
+
 
     def merge_frames(self, frame1, frame2):
 

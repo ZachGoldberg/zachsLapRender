@@ -57,13 +57,13 @@ class LikeHarrysRenderer(BaseRenderer):
         self.text(frame, txt, (5, self.from_bottom(10)), cv2.FONT_HERSHEY_PLAIN, 2,
                   (255, 255, 255), 1, cv2.CV_AA)
 
-        distance = lap.get_distance_at_time(seconds_total_in)
-        t_distance = lap.total_distance
-        dist_perc = distance / t_distance
-        txt = "%.3f%%" % dist_perc
-        self.text(frame, txt,
-                  (550, 100), cv2.FONT_HERSHEY_PLAIN, 3,
-                  (255, 255, 255), 2, cv2.CV_AA)
+        #distance = lap.get_distance_at_time(seconds_total_in)
+        #t_distance = lap.total_distance
+        #dist_perc = distance / t_distance
+        #txt = "%.3f%%" % dist_perc
+        #self.text(frame, txt,
+        #          (550, 100), cv2.FONT_HERSHEY_PLAIN, 3,
+        #          (255, 255, 255), 2, cv2.CV_AA)
 
         # Render lap info
         lapdate = (lap.start_time + timedelta(seconds=seconds_total_in)).strftime(
