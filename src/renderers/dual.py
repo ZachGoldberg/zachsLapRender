@@ -213,11 +213,11 @@ class DualRenderer(BaseRenderer):
 
         distance1 = laps[0].get_distance_at_time(seconds_in1)
         t_distance1 = laps[0].total_distance
-        dist_perc1 = distance1 / t_distance1
+        dist_perc1 = 100 * (distance1 / t_distance1)
 
         distance2 = laps[1].get_distance_at_time(seconds_in2)
         t_distance2 = laps[1].total_distance
-        dist_perc2 = distance2 / t_distance2
+        dist_perc2 = 100 * (distance2 / t_distance2)
 
 
         with self.alpha(0.5, frame):
@@ -225,17 +225,31 @@ class DualRenderer(BaseRenderer):
             self.draw_map(frame, starts[1], framenums[1], laps[1])
 
             # Draw the leading ball first
-            if distance1 > distance2:
+            if dustance_perc1 > distance_perc2:
                 self.draw_map_ball(frame, starts[1], framenums[1], laps[1], color2)
                 self.draw_map_ball(frame, starts[0], framenums[0], laps[0], color1)
             else:
                 self.draw_map_ball(frame, starts[0], framenums[0], laps[0], color1)
                 self.draw_map_ball(frame, starts[1], framenums[1], laps[1], color2)
 
-        #txt = "%.3f%%" % dist_perc
-        #self.text(frame, txt,
-        #          (550, 100), cv2.FONT_HERSHEY_PLAIN, 3,
-        #          (255, 255, 255), 2, cv2.CV_AA)
+
+            txt = "%4.2f%%" % (dist_perc1 - dist_perc2)
+            txtheight = (self.video1.height / 2) + 50
+            txtw_start = (self.video1.width / 2) - 300
+            self.text(frame, "Top vs.",
+                      (txtw_start, txtheight),
+                      cv2.FONT_HERSHEY_PLAIN, 2,
+                      color1, 2, cv2.CV_AA)
+
+            self.text(frame, "Bottom:",
+                      (txtw_start + 135, txtheight),
+                      cv2.FONT_HERSHEY_PLAIN, 2,
+                      color2, 2, cv2.CV_AA)
+
+            self.text(frame, txt,
+                      (txtw_start + 280, txtheight),
+                      cv2.FONT_HERSHEY_PLAIN, 2,
+                      (255, 255, 255), 2, cv2.CV_AA)
 
 
     def merge_frames(self, frame1, frame2):
