@@ -208,14 +208,16 @@ if __name__ == '__main__':
         split_video = dr.render_laps(args.outputdir or "/tmp/",
                                      args.show_video,
                                      args.bookend_time)
-        video_id = youtube.upload_video(split_video)
-        print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+        if args.youtube:
+            video_id = youtube.upload_video(split_video)
+            print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
     else:
         for video in matched_videos:
             renderer = LikeHarrysRenderer(video)
             lapvideos = renderer.render_laps(args.outputdir or "/tmp/",
                                              args.show_video,
                                              args.bookend_time)
-            for lapvideo in lapvideos:
-                video_id = youtube.upload_video(lapvideo)
-                print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+            if args.youtube:
+                for lapvideo in lapvideos:
+                    video_id = youtube.upload_video(lapvideo)
+                    print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id

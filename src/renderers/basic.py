@@ -7,7 +7,8 @@ class BasicRenderer(BaseRenderer):
     def __init__(self, video):
         super(BasicRenderer, self).__init__(video)
 
-    def render_frame(self, frame, start_frame, framenum, lap):
+    def render_frame(self, frame, lapparams, framenum, lap):
+        start_frame = lapparams.start_frame
         frames_in = framenum - start_frame
         seconds_total_in = frames_in / self.video.fps
         minutes_in = int(seconds_total_in / 60)

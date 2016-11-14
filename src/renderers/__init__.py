@@ -2,6 +2,7 @@ import cv2
 import logging
 import math
 import os
+import subprocess
 import time
 from threading import Thread
 
@@ -290,7 +291,6 @@ class BaseRenderer(object):
 
     def _render_video_file(self, out, params, show_video=False):
         for lapparams in params.laps:
-
             framenum = lapparams.start_frame
             frames_writen = 0
             last_time = time.time()
@@ -305,7 +305,7 @@ class BaseRenderer(object):
                     ret, frame = params.get_framenum(lapparams, t_framenum)
 
                     rendered_frame = self.render_frame(frame,
-                                                       lapparams.start_frame,
+                                                       lapparams,
                                                        t_framenum,
                                                        lapparams.lapinfo["lap"])
                     thread_results.insert(0, rendered_frame)
@@ -345,7 +345,10 @@ class BaseRenderer(object):
 
     def _render_audio_file(self, params, newaudiofile):
         logger.debug("Extracting audio...")
-        extract_audio(self.video.filenames[0], newaudiofile, start_time, duration)
+        extract_audio(params.laps[0].video.filenames[0],
+                      newaudiofile,
+                      params.laps[0].start_time,
+                      params.laps[0].duration)
 
     def _merge_audio_and_video(self, videofname, audiofname, outputfile):
         logger.debug("Merging video and audio data...")
@@ -381,7 +384,6 @@ class BaseRenderer(object):
         fourcc = cv2.cv.CV_FOURCC(*'XVID')
         out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
                                                              params.height))
-
         self._render_video_file(out, params, show_video=show_video)
         out.release()
 
@@ -405,6 +407,11 @@ class LapRenderParams(object):
         self.total_frames = self.end_frame - self.start_frame
         self.duration = self.total_frames / video.fps
 
+
+        self.lap_start_frame = self.start_frame
+        self.lap_start_time = self.start_time
+        self.lap_end_frame = self.end_frame
+
     def set_bookend_time(self, btime):
         video = self.video
         lapinfo = self.lapinfo
@@ -412,7 +419,7 @@ class LapRenderParams(object):
         bookend_frames = btime * video.fps
 
         self.start_frame = lapinfo['start_frame'] + video.frame_offset - bookend_frames
-        self.start_time = (self.start_frame / video.fps) - bookend_frames
+        self.start_time = (self.start_frame / video.fps)
 
         if self.start_frame < 0:
             self.start_frame = 0
@@ -427,6 +434,9 @@ class LapRenderParams(object):
 
         self.total_frames = self.end_frame - self.start_frame
         self.duration = self.total_frames / video.fps
+
+    def is_mid_lap(self, framenum):
+        return self.lap_start_frame < framenum < self.lap_end_frame
 
 
 class RenderParams(object):
@@ -496,8 +506,9 @@ class RenderParams(object):
 
     def release(self):
         for videocaps in self.oldcaps.values():
-            for cap in videocaps:
-                cap.release()
+            for caplist in videocaps:
+                for cap in caplist:
+                    cap.release()
 
 
 from basic import BasicRenderer

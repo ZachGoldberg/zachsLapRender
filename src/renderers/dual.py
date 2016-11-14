@@ -150,7 +150,6 @@ class DualRenderer(BaseRenderer):
                      starts,
                      framenums,
                      laps):
-
         color1 = (255, 255, 100)
         color2 = (255, 150, 100)
 
