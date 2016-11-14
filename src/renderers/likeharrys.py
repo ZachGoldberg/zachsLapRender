@@ -12,7 +12,9 @@ class LikeHarrysRenderer(BaseRenderer):
 
     def render_frame(self, frame, lapparams, framenum, lap):
         if not lapparams.is_mid_lap(framenum):
-            return frame
+            with self.alpha(0.1, frame):
+                self.draw_countdown(frame, lapparams, framenum, lap)
+                return frame
 
         start_frame = lapparams.lap_start_frame
         frames_in = framenum - lapparams.lap_start_frame

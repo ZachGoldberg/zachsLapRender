@@ -51,7 +51,12 @@ class BaseRenderer(object):
     def line(self, frame, start, fin, color, thickness, lineType=8, shift=0):
         cv2.line(frame, start, fin, color, thickness, lineType, shift)
 
-    def text(self, frame, txt, origin, font, size, color, stroke, linetype):
+    def text(self, frame, txt, origin,
+             font=cv2.FONT_HERSHEY_PLAIN,
+             size=1.5,
+             color=(255, 255, 255),
+             stroke=1,
+             linetype=cv2.CV_AA):
         cv2.putText(frame, txt, origin, font, size, color, stroke, linetype)
 
     def alpha_line(self, frame, start, fin, color, thickness, lineType=8, shift=0, alpha=0):
@@ -288,6 +293,38 @@ class BaseRenderer(object):
         (lat, lon) = lap.get_gps_at_time(seconds_total_in)
         cv2.circle(frame, self._get_map_point(gps_origin, map_origin, scales, None, lat, lon), 10, ballcolor, -1)
 
+    def draw_countdown(self, frame, lapparams, framenum, lap):
+        time_before = lapparams.time_before_lap(framenum)
+
+        gps_origin, origin, scales = self._map_data(lap)
+
+        radius = self.g_meter_size / 2
+
+        inner_color = (100, 100, 100)
+        frame_color = (200, 200, 200)
+        inner_line_color = (255, 255, 255)
+
+        # Render G force in a circle
+        # Background Circle
+        self.circle(frame, origin, radius, inner_color, -1)
+
+        # Background outline
+        self.circle(frame, origin, radius, frame_color, 1)
+
+        # Outer Stroke
+        self.circle(frame, origin, int(radius * 0.65), inner_line_color, 1)
+
+        # Crosshairs
+
+        self.line(frame,
+                  (origin[0] - radius, origin[1]),
+                  (origin[0] + radius, origin[1]),
+                  inner_line_color, 1)
+
+        self.text(frame, str(int(time_before)),
+                  (origin[0] - 30, origin[1] + 34),
+                  size=6,
+                  stroke=4)
 
     def _render_video_file(self, out, params, show_video=False):
         for lapparams in params.laps:
@@ -438,6 +475,9 @@ class LapRenderParams(object):
     def is_mid_lap(self, framenum):
         return self.lap_start_frame < framenum < self.lap_end_frame
 
+    def time_before_lap(self, framenum):
+        return (self.lap_start_frame - framenum) / self.video.fps
+
 
 class RenderParams(object):
     def __init__(self, videolaps, outputdir):
@@ -471,7 +511,6 @@ class RenderParams(object):
     def set_bookend_time(self, btime):
         for lap in self.laps:
             lap.set_bookend_time(btime)
-
 
     def get_framenum(self, lapparams, framenum, open_index=0):
         # Figure out what capture this is
