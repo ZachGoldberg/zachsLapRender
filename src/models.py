@@ -112,71 +112,6 @@ class Video(object):
         self.file_start_date = creation_time(self.filenames[0])
         self.is_valid_video = True
 
-
-    def render_frame(self, frame, start_frame, framenum, lap):
-        return self.renderer.render_frame(frame, start_frame, framenum, lap)
-
-    def next_sync_event(self, frames_in):
-        seconds_in = frames_in / self.fps
-
-        print "-" * 50
-        for lapinfo in self.matched_laps:
-            lap = lapinfo['lap']
-            lap_seconds_in = seconds_in - lapinfo['start_seconds']
-            print "Lap Start: %s, seconds in: %s" % (lapinfo['start_seconds'], seconds_in)
-            print "Lap Seconds In: %s" % lap_seconds_in
-            if lap_seconds_in < -1 or frames_in > lapinfo['end_frame']:
-                continue
-
-            speedinfo = lap.get_nearest_speed_direction_change(
-                lap_seconds_in, True) or {}
-
-            brakeinfo = lap.get_nearest_lin_g_direction_change(lap_seconds_in, True) or {}
-            cornerinfo = lap.get_nearest_lat_g_direction_change(lap_seconds_in, True) or {}
-
-            lowest_time = min([speedinfo.get('seconds'), brakeinfo.get('seconds'), cornerinfo.get('seconds')])
-            print lapinfo
-            print speedinfo, brakeinfo, cornerinfo
-            print lowest_time
-            new_frame = lapinfo['start_frame'] + math.ceil(lowest_time * self.fps)
-
-            print "Returning %s" % new_frame
-            if abs(new_frame - frames_in) == 0:
-                return new_frame + 1
-
-            return new_frame
-
-        return frames_in
-
-    def prev_sync_event(self, frames_in):
-        seconds_in = frames_in / self.fps
-        print "-" * 50
-
-
-        for lapinfo in self.matched_laps:
-            lap = lapinfo['lap']
-            lap_seconds_in = seconds_in - lapinfo['start_seconds']
-            print "Lap Start: %s, seconds in: %s" % (lapinfo['start_seconds'], seconds_in)
-            print lap_seconds_in
-            if lap_seconds_in < -1 or frames_in > lapinfo['end_frame']:
-                continue
-
-            speedinfo = lap.get_nearest_speed_direction_change(
-                lap_seconds_in) or {}
-
-            brakeinfo = lap.get_nearest_lin_g_direction_change(lap_seconds_in) or {}
-            cornerinfo = lap.get_nearest_lat_g_direction_change(lap_seconds_in) or {}
-
-            highest_time = max([speedinfo.get('seconds'), brakeinfo.get('seconds'), cornerinfo.get('seconds')])
-            print lapinfo
-            print seconds_in
-            print lap_seconds_in
-            print speedinfo, brakeinfo, cornerinfo
-            print highest_time
-            return lapinfo['start_frame'] + int(highest_time * self.fps)
-
-        return frames_in
-
     def renderable_laps(self):
         return [m for m in self.matched_laps if m['render']]
 
@@ -374,11 +309,6 @@ class Video(object):
                     cap.release()
                     cv2.destroyAllWindows()
                     return
-                # Experimental features that aren't quite finished and might crash:
-                #elif keypress == W_KEY:
-                #    movement = self.next_sync_event(framenum) - framenum
-                #elif keypress == Q_KEY:
-                #    movement = self.prev_sync_event(framenum) - framenum
                 elif keypress == SPACE:
                     playing = not playing
                 elif keypress == UP_KEY:
