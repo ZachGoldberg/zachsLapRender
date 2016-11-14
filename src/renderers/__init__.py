@@ -288,19 +288,6 @@ class BaseRenderer(object):
         cv2.circle(frame, self._get_map_point(gps_origin, map_origin, scales, None, lat, lon), 10, ballcolor, -1)
 
 
-
-    def _get_render_params(self, outputdir):
-        laptuples = []
-
-        for lapinfo in self.video.matched_laps:
-            if not lapinfo.get("render", True):
-                logger.debug("Skipping lap %s due to render=false" % lapinfo['lap'])
-                continue
-
-            laptuples.append((self.video, lapinfo))
-
-        return RenderParams(laptuples, outputdir)
-
     def _render_video_file(self, out, params, show_video=False):
         for lapparams in params.laps:
 
@@ -366,9 +353,27 @@ class BaseRenderer(object):
             videofname, audiofname, outputfile)
         subprocess.call(cmd, shell=True)
 
-    def render_laps(self, outputdir, show_video=False):
+    def _get_render_params(self, outputdir):
+        laptuples = []
 
+        for lapinfo in self.video.matched_laps:
+            if not lapinfo.get("render", True):
+                logger.debug("Skipping lap %s due to render=false" % lapinfo['lap'])
+                continue
+            else:
+                logger.debug("Generating params for %s" % lapinfo['lap'])
+
+            laptuples.append((self.video, lapinfo))
+
+        if laptuples:
+            return RenderParams(laptuples, outputdir)
+
+    def render_laps(self, outputdir, show_video=False, bookend_time=0):
         params = self._get_render_params(outputdir)
+        if not params:
+            return []
+
+        params.set_bookend_time(bookend_time)
 
         logger.info("Rendering %s..." % (params.newfname))
 
@@ -397,9 +402,32 @@ class LapRenderParams(object):
         self.start_frame = lapinfo['start_frame'] + video.frame_offset
         self.start_time = self.start_frame / video.fps
         self.end_frame = lapinfo['end_frame'] + video.frame_offset
+        self.total_frames = self.end_frame - self.start_frame
+        self.duration = self.total_frames / video.fps
+
+    def set_bookend_time(self, btime):
+        video = self.video
+        lapinfo = self.lapinfo
+
+        bookend_frames = btime * video.fps
+
+        self.start_frame = lapinfo['start_frame'] + video.frame_offset - bookend_frames
+        self.start_time = (self.start_frame / video.fps) - bookend_frames
+
+        if self.start_frame < 0:
+            self.start_frame = 0
+
+        if self.start_time < 0:
+            self.start_time = 0
+
+        self.end_frame = lapinfo['end_frame'] + video.frame_offset + bookend_frames
+
+        if self.end_frame > video.frame_count:
+            self.end_frame = video.frame_count
 
         self.total_frames = self.end_frame - self.start_frame
         self.duration = self.total_frames / video.fps
+
 
 class RenderParams(object):
     def __init__(self, videolaps, outputdir):
@@ -429,6 +457,11 @@ class RenderParams(object):
         self.fps = videolaps[0][0].fps
         self.width = videolaps[0][0].width
         self.height = videolaps[0][0].height
+
+    def set_bookend_time(self, btime):
+        for lap in self.laps:
+            lap.set_bookend_time(btime)
+
 
     def get_framenum(self, lapparams, framenum, open_index=0):
         # Figure out what capture this is
@@ -465,6 +498,7 @@ class RenderParams(object):
         for videocaps in self.oldcaps.values():
             for cap in videocaps:
                 cap.release()
+
 
 from basic import BasicRenderer
 from dual import DualRenderer

@@ -205,16 +205,17 @@ if __name__ == '__main__':
         from renderers.dual import DualRenderer
         from renderers.likeharrys import LikeHarrysRenderer
         dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-        split_video = dr.render_laps(args.outputdir or "/tmp/", args.show_video)
+        split_video = dr.render_laps(args.outputdir or "/tmp/",
+                                     args.show_video,
+                                     args.bookend_time)
         video_id = youtube.upload_video(split_video)
         print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
     else:
-        # For now, just create a new .mp4 with each lap
-        # we've discovered.
-        # Then we'll write small bits to each of those, and build from there
         for video in matched_videos:
             renderer = LikeHarrysRenderer(video)
-            lapvideos = renderer.render_laps(args.outputdir or "/tmp/", args.show_video)
+            lapvideos = renderer.render_laps(args.outputdir or "/tmp/",
+                                             args.show_video,
+                                             args.bookend_time)
             for lapvideo in lapvideos:
                 video_id = youtube.upload_video(lapvideo)
                 print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
