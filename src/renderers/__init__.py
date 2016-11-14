@@ -360,7 +360,6 @@ class BaseRenderer(object):
         logger.debug("Extracting audio...")
         extract_audio(self.video.filenames[0], newaudiofile, start_time, duration)
 
-
     def _merge_audio_and_video(self, videofname, audiofname, outputfile):
         logger.debug("Merging video and audio data...")
         cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
@@ -404,15 +403,16 @@ class LapRenderParams(object):
 
 class RenderParams(object):
     def __init__(self, videolaps, outputdir):
+        self.oldcaps_f = {}
         self.oldcaps = {}
         self.capstate = {}
         for video, _ in videolaps:
             if not video in self.oldcaps:
+                self.oldcaps_f[video] = []
                 self.oldcaps[video] = []
                 for fn in video.filenames:
-                    cap = cv2.VideoCapture(fn)
-                    self.oldcaps[video].append(cap)
-                    self.capstate[cap] = 0
+                    self.oldcaps_f[video].append(fn)
+                    self.oldcaps[video].append([])
 
         self.laps = []
         for video, lapinfo in videolaps:
@@ -430,22 +430,33 @@ class RenderParams(object):
         self.width = videolaps[0][0].width
         self.height = videolaps[0][0].height
 
-    def get_framenum(self, lapparams, framenum):
+    def get_framenum(self, lapparams, framenum, open_index=0):
         # Figure out what capture this is
         # Then figure out where we are currently seeked in that capture
         # If it's the next frame, call read.  Otherwise, seek and read
-        video_caps = self.oldcaps[lapparams.video]
 
-        # Now figure out which file in that video this is
+        # Figure out which file in that video this is
         fileindex = lapparams.video.filename_number(framenum)
 
-        cap = video_caps[fileindex]
+        video_fname = self.oldcaps_f[lapparams.video][fileindex]
+        video_caps = self.oldcaps[lapparams.video]
+        cap_sequence = video_caps[fileindex]
+
+        while len(cap_sequence) <= open_index:
+            cap = cv2.VideoCapture(video_fname)
+            cap_sequence.append(cap)
+            self.capstate[cap] = 0
+
+        cap = cap_sequence[open_index]
+
         cap_last_postion = self.capstate[cap]
 
         if framenum == (cap_last_postion + 1):
             self.capstate[cap] = framenum
             return cap.read()
         else:
+            print "SEEKING..."
+            print framenum, cap_last_postion
             cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             self.capstate[cap] = framenum
             return cap.read()

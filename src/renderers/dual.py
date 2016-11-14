@@ -9,7 +9,7 @@ import time
 
 from threading import Thread
 
-from renderers import BaseRenderer
+from renderers import BaseRenderer, RenderParams
 from utils import extract_audio, mix_audiofiles
 
 logger = logging.getLogger(__name__)
@@ -28,11 +28,11 @@ class DualRenderer(BaseRenderer):
 
         self.renderer = subrenderer
 
-        self.video1.renderer = self.renderer(self.video1)
-        self.video1.renderer.enable_map = False
+        self.renderer1 = self.renderer(self.video1)
+        self.renderer1.enable_map = False
 
-        self.video2.renderer = self.renderer(self.video2)
-        self.video2.renderer.enable_map = False
+        self.renderer2 = self.renderer(self.video2)
+        self.renderer2.enable_map = False
 
         self.map_width = self.video1.width * 0.9
         self.map_height = self.video.height * 0.9
@@ -52,50 +52,55 @@ class DualRenderer(BaseRenderer):
         return RenderParams([(self.video1, lapinfo1),
                              (self.video2, lapinfo2)], outputdir)
 
+    def _render_audio_file(self, params, newaudiofile):
+        lp1 = params.laps[0]
+        lp2 = params.laps[1]
 
-    def render_laps(self, outputdir, show_video=False):
+        logger.debug("Extracting audio...")
+        newaudiofile1 = "/tmp/zachaudioout1.wav"
+        extract_audio(self.video1.filenames[0], newaudiofile1, lp1.start_time, lp1.duration)
 
+        newaudiofile2 = "/tmp/zachaudioout2.wav"
+        extract_audio(self.video2.filenames[0], newaudiofile2, lp2.start_time, lp2.duration)
+
+        newaudiofile = "/tmp/zachaudioout.wav"
+        if duration1 > duration2:
+            mix_audiofiles(newaudiofile1, newaudiofile2, newaudiofile)
+        else:
+            mix_audiofiles(newaudiofile2, newaudiofile1, newaudiofile)
+
+
+    def _render_video_file(self, out, params, show_video=False):
+        lp1 = params.laps[0]
+        lp2 = params.laps[1]
+
+        framenum1 = lp1.start_frame
+        framenum2 = lp2.start_frame
         frames_writen = 0
-
-
-        end_frame = max([end_frame1, end_frame2])
-        total_frames = int(max([total_frames1, total_frames2]))
-
-        # Create a new videowriter file
-        fourcc = cv2.cv.CV_FOURCC(*'XVID')
-        out = cv2.VideoWriter(newfname, fourcc, self.video1.fps, (self.video1.width,
-                                                                  self.video1.height))
-
-        logger.debug("Seeking to lap start at %s,%s ..." % (framenum1, framenum2))
-
-        cap1.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum1)
-        cap2.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum2)
-
-
-        frame1 = None
-        frame2 = None
+        total_frames = int(max([lp1.total_frames, lp2.total_frames]))
+        end_frame = max([lp1.end_frame, lp2.end_frame])
 
         last_time = time.time()
 
-        while(cap1.isOpened() or cap2.isOpened()):
+        while framenum1 < lp1.end_frame or framenum2 < lp2.end_frame:
             framenum1 += 1
             framenum2 += 1
             frames_writen += 1
             if frames_writen % 30 == 0:
                 delta = time.time() - last_time
                 last_time = time.time()
-                logger.debug("Written %s/%s frames, %s fps..." % (frames_writen, total_frames,
-                                                                  (30 / delta)))
+                logger.debug("Written %s/%s frames, %s fps..." % (
+                    frames_writen, total_frames,
+                    (30 / delta)))
 
             thread1 = None
             thread2 = None
             t1val = {}
             t2val = {}
-            if framenum1 <= end_frame1:
-
+            if framenum1 <= lp1.end_frame:
+                ret1, frame1 = params.get_framenum(lp1, framenum1)
                 def render_vid(val):
-                    ret1, frame1 = cap1.read()
-                    self.video1.render_frame(frame1, start_frame1, framenum1, lapinfo1["lap"])
+                    self.renderer1.render_frame(frame1, lp1.start_frame, framenum1, lp1.lapinfo["lap"])
                     val['frame'] = frame1
 
                 thread1 = Thread(target=render_vid, args=(t1val, ))
@@ -104,10 +109,10 @@ class DualRenderer(BaseRenderer):
                 # Frame1 will be from the last iteration
                 pass
 
-            if framenum2 <= end_frame2:
+            if framenum2 <= lp2.end_frame:
+                ret2, frame2 = params.get_framenum(lp2, framenum2, 1)
                 def render_vid2(val):
-                    ret2, frame2 = cap2.read()
-                    self.video2.render_frame(frame2, start_frame2, framenum2, lapinfo2["lap"])
+                    self.renderer2.render_frame(frame2, lp2.start_frame, framenum2, lp2.lapinfo["lap"])
                     val['frame'] = frame2
 
                 thread2 = Thread(target=render_vid2, args=(t2val, ))
@@ -125,9 +130,9 @@ class DualRenderer(BaseRenderer):
 
             merged_frame = self.merge_frames(frame1, frame2)
             self.render_frame(merged_frame,
-                              (start_frame1, start_frame2),
+                              (lp1.start_frame, lp2.start_frame),
                               (framenum1, framenum2),
-                              (lapinfo1['lap'], lapinfo2['lap']))
+                              (lp1.lapinfo['lap'], lp2.lapinfo['lap']))
 
             out.write(merged_frame)
 
@@ -135,36 +140,10 @@ class DualRenderer(BaseRenderer):
                 cv2.imshow('frame', merged_frame)
                 keypress = cv2.waitKey(1)
 
-            if framenum1 > end_frame1 and framenum2 > end_frame2:
-                break
-
         logger.debug("Buttoning up video...")
-        cap1.release()
-        cap2.release()
-        out.release()
+        params.release()
         cv2.destroyAllWindows()
-
-        logger.debug("Extracting audio...")
-        newaudiofile1 = "/tmp/zachaudioout1.wav"
-        extract_audio(self.video1.filenames[0], newaudiofile1, start_time1, duration1)
-
-        newaudiofile2 = "/tmp/zachaudioout2.wav"
-        extract_audio(self.video2.filenames[0], newaudiofile2, start_time2, duration2)
-
-        newaudiofile = "/tmp/zachaudioout.wav"
-        if duration1 > duration2:
-            mix_audiofiles(newaudiofile1, newaudiofile2, newaudiofile)
-        else:
-            mix_audiofiles(newaudiofile2, newaudiofile1, newaudiofile)
-
-        logger.debug("Merging video and audio data...")
-        cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
-            newfname, newaudiofile, final_newfname)
-
-        subprocess.call(cmd, shell=True)
-
-        logger.debug("Finished with %s" % final_newfname)
-        return final_newfname
+        return True
 
 
     def render_frame(self, frame,
@@ -192,7 +171,7 @@ class DualRenderer(BaseRenderer):
             self.draw_map(frame, starts[1], framenums[1], laps[1])
 
             # Draw the leading ball first
-            if dustance_perc1 > distance_perc2:
+            if dist_perc1 > dist_perc2:
                 self.draw_map_ball(frame, starts[1], framenums[1], laps[1], color2)
                 self.draw_map_ball(frame, starts[0], framenums[0], laps[0], color1)
             else:
@@ -220,7 +199,6 @@ class DualRenderer(BaseRenderer):
 
 
     def merge_frames(self, frame1, frame2):
-
         height = self.video1.height / 2
         width = self.video1.width
 
