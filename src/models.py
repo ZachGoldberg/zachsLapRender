@@ -28,6 +28,7 @@ class Video(object):
     def __init__(self, filename):
         self.filenames = [filename]
         self.filebase = os.path.basename(filename[0])
+        self.file_frame_boundaries = []
         self.file_start_date = None
         self.last_modified_at = None
         self.last_access_at = None
@@ -42,6 +43,15 @@ class Video(object):
         self.frame_offset = -28
         self._calc_times()
         self.trackname = ""
+
+    def filename_number(self, framenum):
+        index = 0
+        for boundary in self.file_frame_boundaries:
+            if framenum < boundary:
+                return index
+            index += 1
+
+        return index
 
     def file_basenames(self):
         return ",".join([os.path.basename(fn) for fn in self.filenames])
@@ -70,8 +80,6 @@ class Video(object):
         return None, None
 
 
-    def sort_filenames(self):
-        pass
 
     def _calc_times(self):
         # Open the file, find timestmps etc.
@@ -101,7 +109,8 @@ class Video(object):
                 for filename in self.filenames[1:]:
                     cap = cv2.VideoCapture(filename)
                     fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
-                    frame_count = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+                    self.file_frame_boundaries.append(self.frame_count)
+                    self.frame_count += int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
                     self.duration += timedelta(seconds=frame_count / fps)
                     cap.release()
 

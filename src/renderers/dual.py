@@ -1,4 +1,5 @@
 import cv2
+
 import logging
 import math
 import numpy as np
@@ -39,7 +40,7 @@ class DualRenderer(BaseRenderer):
         self.map_y = 200
         self.map_x = self.map_width
 
-    def render_laps(self, outputdir, show_video=False):
+    def _get_render_params(self, outputdir):
         lapinfo1 = self.video1.renderable_laps()[0]
         lapinfo2 = self.video2.renderable_laps()[0]
 
@@ -47,45 +48,14 @@ class DualRenderer(BaseRenderer):
         if self.video1 == self.video2:
             lapinfo2 = self.video2.renderable_laps()[1]
 
-        # Load up the old videos
-        # TODO: Need to account for split gopro videos!
-        cap1 = cv2.VideoCapture(self.video1.filenames[0])
-        cap2 = cv2.VideoCapture(self.video2.filenames[0])
 
-        newfname = os.path.join(outputdir, "lap_%s_%s_join.noaudio.avi" % (
-            lapinfo1["lap"].lapnum,
-            lapinfo2["lap"].lapnum))
-
-        final_newfname = os.path.join(outputdir, "lap_%s_%s_join.avi" % (
-            lapinfo1["lap"].lapnum,
-            lapinfo2["lap"].lapnum))
+        return RenderParams([(self.video1, lapinfo1),
+                             (self.video2, lapinfo2)], outputdir)
 
 
-        logger.info("Rendering %s from %s, %s..." % (newfname,
-                                                     self.video1.filebase,
-                                                     self.video2.filebase))
-
-        # Include the frame offset from calibration
-        start_frame1 = lapinfo1['start_frame'] + self.video1.frame_offset
-        start_time1 = start_frame1 / self.video1.fps
-        end_frame1 = lapinfo1['end_frame'] + self.video1.frame_offset
-
-        total_frames1 = end_frame1 - start_frame1
-        duration1 = total_frames1 / self.video1.fps
-
-        framenum1 = start_frame1
-
-        start_frame2 = lapinfo2['start_frame'] + self.video2.frame_offset
-        start_time2 = start_frame2 / self.video2.fps
-        end_frame2 = lapinfo2['end_frame'] + self.video2.frame_offset
-
-        total_frames2 = end_frame2 - start_frame2
-        duration2 = total_frames2 / self.video2.fps
-
-        framenum2 = start_frame2
+    def render_laps(self, outputdir, show_video=False):
 
         frames_writen = 0
-        skipped = 0
 
 
         end_frame = max([end_frame1, end_frame2])

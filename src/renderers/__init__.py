@@ -11,7 +11,6 @@ from utils import extract_audio, mix_audiofiles
 logger = logging.getLogger(__name__)
 
 class BaseRenderer(object):
-
     def __init__(self, video):
         self.g_meter_size = 200
         self.g_meter_ball_size = 10
@@ -290,119 +289,171 @@ class BaseRenderer(object):
 
 
 
-    def render_laps(self, outputdir, show_video=False):
-        lapvideos = []
+    def _get_render_params(self, outputdir):
+        laptuples = []
 
         for lapinfo in self.video.matched_laps:
             if not lapinfo.get("render", True):
                 logger.debug("Skipping lap %s due to render=false" % lapinfo['lap'])
                 continue
 
-            # Load up the old video
-            oldcap = cv2.VideoCapture(self.video.filenames[0])
+            laptuples.append((self.video, lapinfo))
 
-            newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
-                lapinfo["lap"].lapnum,
-                lapinfo["lap"].lap_time))
+        return RenderParams(laptuples, outputdir)
 
-            final_newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
-                lapinfo["lap"].lapnum,
-                lapinfo["lap"].lap_time))
+    def _render_video_file(self, out, params, show_video=False):
+        for lapparams in params.laps:
 
-            lapvideos.append(final_newfname)
-
-            logger.info("Rendering %s from %s..." % (newfname, self.video.filebase))
-
-            # Include the frame offset from calibration
-            start_frame = lapinfo['start_frame'] + self.video.frame_offset
-            start_time = start_frame / self.video.fps
-            end_frame = lapinfo['end_frame'] + self.video.frame_offset
-
-            total_frames = end_frame - start_frame
-            duration = total_frames / self.video.fps
-
-            framenum = start_frame
+            framenum = lapparams.start_frame
             frames_writen = 0
-            skipped = 0
-
-            # Create a new videowriter file
-            fourcc = cv2.cv.CV_FOURCC(*'XVID')
-            out = cv2.VideoWriter(newfname, fourcc, self.video.fps, (self.video.width,
-                                                                     self.video.height))
-
-            logger.debug("Seeking to lap start at %s ..." % framenum)
-            oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             last_time = time.time()
 
             thread_results = []
             def render_thread(start):
                 t_framenum = start
-                while t_framenum <= end_frame:
+                while t_framenum <= lapparams.end_frame:
                     while len(thread_results) > 100:
                         time.sleep(.1)
 
-                    ret, frame = oldcap.read()
+                    ret, frame = params.get_framenum(lapparams, t_framenum)
 
-                    rendered_frame = self.render_frame(frame, start_frame, t_framenum, lapinfo["lap"])
+                    rendered_frame = self.render_frame(frame,
+                                                       lapparams.start_frame,
+                                                       t_framenum,
+                                                       lapparams.lapinfo["lap"])
                     thread_results.insert(0, rendered_frame)
                     t_framenum += 1
-                    #if t_framenum % 30 == 0:
-                    #    logger.debug("Rendered %s/%s frames..." % (t_framenum - start, end_frame - start))
-
 
             worker_thread = Thread(target=render_thread, args=(framenum,))
             worker_thread.start()
 
-            while(oldcap.isOpened()):
+            while framenum <= lapparams.end_frame:
                 framenum += 1
 
-                if framenum >= start_frame and framenum <= end_frame:
-                    while len(thread_results) == 0:
-                        time.sleep(0.1)
+                while len(thread_results) == 0:
+                    time.sleep(0.1)
 
-                    rendered_frame = thread_results.pop()
-                    out.write(rendered_frame)
+                rendered_frame = thread_results.pop()
+                out.write(rendered_frame)
 
-                    if show_video:
-                        cv2.imshow('frame', rendered_frame)
-                        keypress = cv2.waitKey(1)
+                if show_video:
+                    cv2.imshow('frame', rendered_frame)
+                    keypress = cv2.waitKey(1)
 
-                    rendered_frame = None
+                # Assist Garbage collection, throw away the rendered frame
+                rendered_frame = None
 
-                    frames_writen += 1
-                    if frames_writen % 30 == 0:
-                        delta = time.time() - last_time
-                        last_time = time.time()
-                        logger.debug("Written %s/%s frames, %s fps..." % (frames_writen, total_frames,
-                                                                          (30 / delta)))
-                else:
-                    skipped += 1
-                    if skipped % 100 == 0:
-                        logger.debug("Still seeking...")
+                frames_writen += 1
+                if frames_writen % 30 == 0:
+                    delta = time.time() - last_time
+                    last_time = time.time()
+                    logger.debug("Written %s/%s frames, %s fps..." % (frames_writen,
+                                                                      lapparams.total_frames,
+                                                                      (30 / delta)))
 
-                if framenum > end_frame:
-                    break
+        logger.debug("Buttoning up video...")
+        params.release()
+        cv2.destroyAllWindows()
+        return True
 
-            logger.debug("Buttoning up video...")
-            oldcap.release()
-            out.release()
-            cv2.destroyAllWindows()
-
-            logger.debug("Extracting audio...")
-            newaudiofile = "/tmp/zachaudioout.wav"
-            extract_audio(self.video.filenames[0], newaudiofile, start_time, duration)
-
-            logger.debug("Merging video and audio data...")
-            cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
-                    newfname, newaudiofile, final_newfname)
-
-            subprocess.call(cmd, shell=True)
-
-            logger.debug("Finished with %s" % final_newfname)
+    def _render_audio_file(self, params, newaudiofile):
+        logger.debug("Extracting audio...")
+        extract_audio(self.video.filenames[0], newaudiofile, start_time, duration)
 
 
-        return lapvideos
+    def _merge_audio_and_video(self, videofname, audiofname, outputfile):
+        logger.debug("Merging video and audio data...")
+        cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
+            videofname, audiofname, outputfile)
+        subprocess.call(cmd, shell=True)
 
+    def render_laps(self, outputdir, show_video=False):
+
+        params = self._get_render_params(outputdir)
+
+        logger.info("Rendering %s..." % (params.newfname))
+
+        # Create a new videowriter file
+        fourcc = cv2.cv.CV_FOURCC(*'XVID')
+        out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
+                                                             params.height))
+
+        self._render_video_file(out, params, show_video=show_video)
+        out.release()
+
+        newaudiofile = "/tmp/zachaudioout.wav"
+        self._render_audio_file(params, newaudiofile)
+
+        self._merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
+
+        logger.debug("Finished with %s" % params.final_newfname)
+
+        return [params.final_newfname]
+
+
+class LapRenderParams(object):
+    def __init__(self, video, lapinfo):
+        self.video = video
+        self.lapinfo = lapinfo
+        self.start_frame = lapinfo['start_frame'] + video.frame_offset
+        self.start_time = self.start_frame / video.fps
+        self.end_frame = lapinfo['end_frame'] + video.frame_offset
+
+        self.total_frames = self.end_frame - self.start_frame
+        self.duration = self.total_frames / video.fps
+
+class RenderParams(object):
+    def __init__(self, videolaps, outputdir):
+        self.oldcaps = {}
+        self.capstate = {}
+        for video, _ in videolaps:
+            if not video in self.oldcaps:
+                self.oldcaps[video] = []
+                for fn in video.filenames:
+                    cap = cv2.VideoCapture(fn)
+                    self.oldcaps[video].append(cap)
+                    self.capstate[cap] = 0
+
+        self.laps = []
+        for video, lapinfo in videolaps:
+            self.laps.append(LapRenderParams(video, lapinfo))
+
+        self.newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
+            videolaps[0][1]["lap"].lapnum,
+            videolaps[0][1]["lap"].lap_time))
+
+        self.final_newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
+            videolaps[0][1]["lap"].lapnum,
+            videolaps[0][1]["lap"].lap_time))
+
+        self.fps = videolaps[0][0].fps
+        self.width = videolaps[0][0].width
+        self.height = videolaps[0][0].height
+
+    def get_framenum(self, lapparams, framenum):
+        # Figure out what capture this is
+        # Then figure out where we are currently seeked in that capture
+        # If it's the next frame, call read.  Otherwise, seek and read
+        video_caps = self.oldcaps[lapparams.video]
+
+        # Now figure out which file in that video this is
+        fileindex = lapparams.video.filename_number(framenum)
+
+        cap = video_caps[fileindex]
+        cap_last_postion = self.capstate[cap]
+
+        if framenum == (cap_last_postion + 1):
+            self.capstate[cap] = framenum
+            return cap.read()
+        else:
+            cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
+            self.capstate[cap] = framenum
+            return cap.read()
+
+    def release(self):
+        for videocaps in self.oldcaps.values():
+            for cap in videocaps:
+                cap.release()
 
 from basic import BasicRenderer
 from dual import DualRenderer
