@@ -17,18 +17,14 @@ Requirements:
 
 
 TODO:
- - Couple of seconds before and after video
+ - Fancier intro before a lap
  - Show filename and lap number in screen
- - Show all laptimes in curses view and allow selection of which ones to actually render
  - Show previous laptime in bold letters
  - Show current and last laptime in a box somewhere
  - Store offsets in some kind of config / preference file so I dont have to do it
  everytime during testing...
- - Render (# CPU) videos at once, make this an optional flag
  - Upload videos in parallel after rendering
  - Options for MPH vs KPH
- - Show name of course of the data
- - Show maximum corner Gs as well
  - Show predictive laptime throughout the lap, compared to best of the day
  - Show splits if they exist
  - Show lap number

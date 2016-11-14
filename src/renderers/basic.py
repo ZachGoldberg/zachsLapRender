@@ -8,6 +8,9 @@ class BasicRenderer(BaseRenderer):
         super(BasicRenderer, self).__init__(video)
 
     def render_frame(self, frame, lapparams, framenum, lap):
+        if not lapparams.is_mid_lap(framenum):
+            return frame
+
         start_frame = lapparams.start_frame
         frames_in = framenum - start_frame
         seconds_total_in = frames_in / self.video.fps
