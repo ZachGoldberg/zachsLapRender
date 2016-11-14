@@ -4,6 +4,7 @@ from datetime import timedelta
 
 
 from renderers import BaseRenderer
+
 class LikeHarrysRenderer(BaseRenderer):
 
     def __init__(self, video):
@@ -186,19 +187,19 @@ class LikeHarrysRenderer(BaseRenderer):
         render_metric_direction_change(speedinfo, speed_text, METRIC_APEX_DURATION,
                                        METRIC_APEX_FADE, (0, 100))
 
+        """
         # TODO: Show this on G-Map, not in Text
-        #if (cornerinfo and
-        #    abs(cornerinfo['metric']) > MIN_APEX_CORNER_G):
-        #    render_metric_direction_change(cornerinfo, corner_text, METRIC_APEX_DURATION,
-        #                                   METRIC_APEX_FADE, (0, 150))
+        if (cornerinfo and
+            abs(cornerinfo['metric']) > MIN_APEX_CORNER_G):
+            render_metric_direction_change(cornerinfo, corner_text, METRIC_APEX_DURATION,
+                                           METRIC_APEX_FADE, (0, 150))
 
-
-        #if (brakeinfo and
-        #    brakeinfo['direction'] == -1 and
-        #    brakeinfo['metric'] < MIN_BRAKE_G):
-        #    render_metric_direction_change(brakeinfo, brake_text, METRIC_APEX_DURATION,
-        #                                   METRIC_APEX_FADE, (0, 200))
-
+        if (brakeinfo and
+            brakeinfo['direction'] == -1 and
+            brakeinfo['metric'] < MIN_BRAKE_G):
+            render_metric_direction_change(brakeinfo, brake_text, METRIC_APEX_DURATION,
+                                           METRIC_APEX_FADE, (0, 200))
+        """
 
         self.draw_map(frame, start_frame, framenum, lap)
 

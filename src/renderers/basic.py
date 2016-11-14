@@ -1,23 +1,22 @@
 import cv2
 
-class BasicRenderer(object):
+from renderers import BaseRenderer
 
-    def __init__(self):
-        self.map_y = 150
-        self.map_x = -50
-        self.map_width = 300
-        self.map_height = 300
+class BasicRenderer(BaseRenderer):
 
-    def render_frame(self, video, frame, start_frame, framenum, lap):
+    def __init__(self, video):
+        super(BasicRenderer, self).__init__(video)
+
+    def render_frame(self, frame, start_frame, framenum, lap):
         frames_in = framenum - start_frame
-        seconds_total_in = frames_in / video.fps
+        seconds_total_in = frames_in / self.video.fps
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
 
 
         # Render watermark
         txt = "Rendered by zachsLapRenderer"
-        cv2.putText(frame, txt, (5, video.height - 10), cv2.FONT_HERSHEY_PLAIN, 2,
+        cv2.putText(frame, txt, (5, self.video.height - 10), cv2.FONT_HERSHEY_PLAIN, 2,
                     (255, 255, 255), 1, cv2.CV_AA)
 
         # Render lap-clock
@@ -117,64 +116,4 @@ class BasicRenderer(object):
                                            METRIC_APEX_FADE, (200, 300))
 
 
-        self.draw_map(video, frame, start_frame, framenum, lap)
-
         return frame
-
-
-    def draw_map(self, video, frame, start_frame, framenum, lap):
-        # Fuck me.
-        # Step 1, compute the GPS bounding box
-        bounds = lap.get_gps_bounds()
-        lat_range = bounds[1] - bounds[0]
-        long_range = bounds[3] - bounds[2]
-
-        gps_origin = (
-            # min_lat + half lat range = center of lat
-            (bounds[0] + (lat_range / 2)),
-            # min_long + half long range = center of long
-            (bounds[2] + (long_range / 2))
-        )
-
-
-        lat_scale_factor = self.map_width / lat_range
-        long_scale_factor = self.map_height / long_range
-
-        map_x = self.map_x
-        map_y = self.map_y
-
-        if map_x < 0:
-            map_x = video.width + self.map_x
-
-        if map_y < 0:
-            map_y = video.height + self.map_y
-
-
-        map_orig = (map_x - self.map_width / 2,
-                    map_y + (self.map_height / 2))
-
-        def get_point(fix=None, lat=None, lon=None):
-            if not lat and fix:
-                lat = fix.lat
-            if not lon and fix:
-                lon = fix.long
-
-            x = gps_origin[0] + ((lat - gps_origin[0]) * lat_scale_factor)
-            y = gps_origin[1] + ((lon - gps_origin[1]) * long_scale_factor)
-
-            x += map_orig[0]
-            y += map_orig[1]
-
-
-            return (int(x), int(y))
-
-        last_fix = lap.fixes[0]
-        for fix in lap.fixes[1:]:
-            cv2.line(frame, get_point(last_fix), get_point(fix), (255,255,255), 3, cv2.CV_AA)
-            last_fix = fix
-
-        frames_in = framenum - start_frame
-        seconds_total_in = frames_in / video.fps
-        # Now let's draw us!
-        (lat, lon) = lap.get_gps_at_time(seconds_total_in)
-        cv2.circle(frame, get_point(None, lat, lon), 10, (255, 255, 100), -1)

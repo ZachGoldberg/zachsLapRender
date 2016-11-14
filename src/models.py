@@ -11,7 +11,7 @@ import wave
 
 import utils
 
-from threading import Thread
+
 from dateutil import parser
 from datetime import datetime, timedelta
 from utils import creation_time, within_x_sec, gopro_video_names_in_order, extract_audio
@@ -40,7 +40,6 @@ class Video(object):
         self.duration = None
         self.matched_laps = []
         self.frame_offset = -28
-        self.renderer = LikeHarrysRenderer(self)
         self._calc_times()
         self.trackname = ""
 
@@ -115,119 +114,6 @@ class Video(object):
     def renderable_laps(self):
         return [m for m in self.matched_laps if m['render']]
 
-    def render_laps(self, outputdir, show_video=False):
-        lapvideos = []
-
-        for lapinfo in self.matched_laps:
-            if not lapinfo.get("render", True):
-                logger.debug("Skipping lap %s due to render=false" % lapinfo['lap'])
-                continue
-
-            # Load up the old video
-            oldcap = cv2.VideoCapture(self.filenames[0])
-
-            newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
-                lapinfo["lap"].lapnum,
-                lapinfo["lap"].lap_time))
-
-            final_newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
-                lapinfo["lap"].lapnum,
-                lapinfo["lap"].lap_time))
-
-            lapvideos.append(final_newfname)
-
-            logger.info("Rendering %s from %s..." % (newfname, self.filebase))
-
-            # Include the frame offset from calibration
-            start_frame = lapinfo['start_frame'] + self.frame_offset
-            start_time = start_frame / self.fps
-            end_frame = lapinfo['end_frame'] + self.frame_offset
-
-            total_frames = end_frame - start_frame
-            duration = total_frames / self.fps
-
-            framenum = start_frame
-            frames_writen = 0
-            skipped = 0
-
-            # Create a new videowriter file
-            fourcc = cv2.cv.CV_FOURCC(*'XVID')
-            out = cv2.VideoWriter(newfname, fourcc, self.fps, (self.width, self.height))
-
-            logger.debug("Seeking to lap start at %s ..." % framenum)
-            oldcap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
-            last_time = time.time()
-
-            thread_results = []
-            def render_thread(start):
-                t_framenum = start
-                while t_framenum <= end_frame:
-                    while len(thread_results) > 100:
-                        time.sleep(.1)
-
-                    ret, frame = oldcap.read()
-
-                    rendered_frame = self.render_frame(frame, start_frame, t_framenum, lapinfo["lap"])
-                    thread_results.insert(0, rendered_frame)
-                    t_framenum += 1
-                    #if t_framenum % 30 == 0:
-                    #    logger.debug("Rendered %s/%s frames..." % (t_framenum - start, end_frame - start))
-
-
-            worker_thread = Thread(target=render_thread, args=(framenum,))
-            worker_thread.start()
-
-            while(oldcap.isOpened()):
-                framenum += 1
-
-                if framenum >= start_frame and framenum <= end_frame:
-                    while len(thread_results) == 0:
-                        time.sleep(0.1)
-
-                    rendered_frame = thread_results.pop()
-                    out.write(rendered_frame)
-
-                    if show_video:
-                        cv2.imshow('frame', rendered_frame)
-                        keypress = cv2.waitKey(1)
-
-                    rendered_frame = None
-
-                    frames_writen += 1
-                    if frames_writen % 30 == 0:
-                        delta = time.time() - last_time
-                        last_time = time.time()
-                        logger.debug("Written %s/%s frames, %s fps..." % (frames_writen, total_frames,
-                                                                          (30 / delta)))
-                else:
-                    skipped += 1
-                    if skipped % 100 == 0:
-                        logger.debug("Still seeking...")
-
-                if framenum > end_frame:
-                    break
-
-            logger.debug("Buttoning up video...")
-            oldcap.release()
-            out.release()
-            cv2.destroyAllWindows()
-
-            logger.debug("Extracting audio...")
-            newaudiofile = "/tmp/zachaudioout.wav"
-            extract_audio(self.filenames[0], newaudiofile, start_time, duration)
-
-            logger.debug("Merging video and audio data...")
-            cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
-                    newfname, newaudiofile, final_newfname)
-
-            subprocess.call(cmd, shell=True)
-
-            logger.debug("Finished with %s" % final_newfname)
-
-
-        return lapvideos
-
-
     def find_lap_by_framenum(self, framenum):
         if not self.matched_laps:
             return None
@@ -282,6 +168,11 @@ class Video(object):
         offset = -28
         framenum = start_framenum + offset
         playing = False
+
+        from renderers import CalibrationRenderer
+
+        renderer = CalibrationRenderer(self)
+
         while(not end_calibration):
             print "Current Frame: %s, sync offset: %s" % (framenum, offset)
 
@@ -292,7 +183,7 @@ class Video(object):
                 lapinfo = self.find_lap_by_framenum(framenum + offset) or self.matched_laps[0]
 
                 lap_start_framenum = lapinfo['start_frame'] + offset
-                frame = self.render_frame(frame, lap_start_framenum, framenum, lapinfo['lap'])
+                frame = renderer.render_frame(frame, lap_start_framenum, framenum, lapinfo['lap'])
                 cv2.imshow('frame', frame)
                 if playing:
                     wait = 1

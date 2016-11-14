@@ -6,6 +6,7 @@ from picker import Picker
 
 
 from models import Fix, Lap, Session, Day
+from renderers import LikeHarrysRenderer
 from utils import collect_videos
 import youtube
 
@@ -73,6 +74,11 @@ def build_parser():
     parser.add_argument("-r", "--show-video-during-rendering",
                         dest="show_video", action='store_true',
                         help="Show the video during the rendering process.  Slows down rendering a little bit.")
+
+    parser.add_argument("-b", "--bookend-time",
+                        dest="bookend_time", type=int,
+                        default=8,
+                        help="Number of seconds to render before and after a lap (default: 8)")
 
 
     return parser
@@ -207,7 +213,8 @@ if __name__ == '__main__':
         # we've discovered.
         # Then we'll write small bits to each of those, and build from there
         for video in matched_videos:
-            lapvideos = video.render_laps(args.outputdir or "/tmp/", args.show_video)
+            renderer = LikeHarrysRenderer(video)
+            lapvideos = renderer.render_laps(args.outputdir or "/tmp/", args.show_video)
             for lapvideo in lapvideos:
                 video_id = youtube.upload_video(lapvideo)
                 print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id

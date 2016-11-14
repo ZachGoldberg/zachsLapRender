@@ -40,9 +40,6 @@ class DualRenderer(BaseRenderer):
         self.map_x = self.map_width
 
     def render_laps(self, outputdir, show_video=False):
-        #self.video1.frame_offset = -28
-        #self.video2.frame_offset = -34
-
         lapinfo1 = self.video1.renderable_laps()[0]
         lapinfo2 = self.video2.renderable_laps()[0]
 
