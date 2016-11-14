@@ -17,7 +17,7 @@ Requirements:
 
 
 TODO:
- - Fancier intro before a lap
+ - Change color of g-force ball depending on Gs
  - Show filename and lap number in screen
  - Show previous laptime in bold letters
  - Show current and last laptime in a box somewhere
