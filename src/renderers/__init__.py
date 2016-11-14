@@ -296,6 +296,9 @@ class BaseRenderer(object):
     def draw_countdown(self, frame, lapparams, framenum, lap):
         time_before = lapparams.time_before_lap(framenum)
 
+        if time_before < 0:
+            return frame
+
         gps_origin, origin, scales = self._map_data(lap)
 
         radius = self.g_meter_size / 2
@@ -304,22 +307,37 @@ class BaseRenderer(object):
         frame_color = (200, 200, 200)
         inner_line_color = (255, 255, 255)
 
+        angle = ((time_before - int(time_before)) * 360)
+        x_top_coord = int(origin[0] + (radius * math.sin(math.radians(angle))))
+        y_top_coord = int(origin[1] + (radius * math.cos(math.radians(angle))))
+        x_bottom_coord = int(origin[0] + (radius * math.sin(math.radians(angle+180))))
+        y_bottom_coord = int(origin[1] + (radius * math.cos(math.radians(angle + 180))))
+
         # Render G force in a circle
         # Background Circle
         self.circle(frame, origin, radius, inner_color, -1)
 
+        # Now draw the half circle to make it more clear what's going on
+        axes = (radius, radius)
+        angle = -1 * angle + 90
+        startAngle = 0
+        endAngle = startAngle - 180
+
         # Background outline
         self.circle(frame, origin, radius, frame_color, 1)
+
+
+        # http://docs.opencv.org/modules/core/doc/drawing_functions.html#ellipse
+        cv2.ellipse(frame, origin, axes, angle, startAngle, endAngle, (70, 70, 70), -1)
 
         # Outer Stroke
         self.circle(frame, origin, int(radius * 0.65), inner_line_color, 1)
 
-        # Crosshairs
-
         self.line(frame,
-                  (origin[0] - radius, origin[1]),
-                  (origin[0] + radius, origin[1]),
-                  inner_line_color, 1)
+                  (x_top_coord, y_top_coord),
+                  (x_bottom_coord, y_bottom_coord),
+                  inner_line_color, 3)
+
 
         self.text(frame, str(int(time_before)),
                   (origin[0] - 30, origin[1] + 34),
