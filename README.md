@@ -17,6 +17,8 @@ Requirements:
 
 
 TODO:
+ - Render a whole session at a time
+ - Upload multiple laps to a YT Folder
  - Change color of g-force ball depending on Gs
  - Show filename and lap number in screen
  - Show previous laptime in bold letters

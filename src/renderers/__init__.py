@@ -394,7 +394,6 @@ class BaseRenderer(object):
                                                                       (30 / delta)))
 
         logger.debug("Buttoning up video...")
-        params.release()
         cv2.destroyAllWindows()
         return True
 
@@ -426,30 +425,36 @@ class BaseRenderer(object):
         if laptuples:
             return RenderParams(laptuples, outputdir)
 
-    def render_laps(self, outputdir, show_video=False, bookend_time=0):
+    def render_laps(self, outputdir, show_video=False, bookend_time=0,
+                    render_laps_uniquely=True):
         params = self._get_render_params(outputdir)
         if not params:
-            return []
+            params = []
+        else:
+            params.set_bookend_time(bookend_time)
+            params.set_render_laps_uniquely(render_laps_uniquely)
 
-        params.set_bookend_time(bookend_time)
 
-        logger.info("Rendering %s..." % (params.newfname))
+        for lap in params.get_videos():
+            logger.info("Rendering %s..." % (params.newfname))
 
-        # Create a new videowriter file
-        fourcc = cv2.cv.CV_FOURCC(*'XVID')
-        out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
-                                                             params.height))
-        self._render_video_file(out, params, show_video=show_video)
-        out.release()
+            # Create a new videowriter file
+            fourcc = cv2.cv.CV_FOURCC(*'XVID')
+            out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
+                                                                        params.height))
+            self._render_video_file(out, params, show_video=show_video)
+            out.release()
 
-        newaudiofile = "/tmp/zachaudioout.wav"
-        self._render_audio_file(params, newaudiofile)
+            newaudiofile = "/tmp/zachaudioout.wav"
+            self._render_audio_file(params, newaudiofile)
 
-        self._merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
+            self._merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
 
-        logger.debug("Finished with %s" % params.final_newfname)
+            logger.debug("Finished with %s" % params.final_newfname)
 
-        return [params.final_newfname]
+            yield params.final_newfname
+
+        params.release()
 
 
 class LapRenderParams(object):
@@ -502,6 +507,9 @@ class RenderParams(object):
         self.oldcaps_f = {}
         self.oldcaps = {}
         self.capstate = {}
+        self.render_laps_uniquely = True
+        self.outputdir = outputdir
+        self.videolaps = videolaps
         for video, _ in videolaps:
             if not video in self.oldcaps:
                 self.oldcaps_f[video] = []
@@ -514,17 +522,32 @@ class RenderParams(object):
         for video, lapinfo in videolaps:
             self.laps.append(LapRenderParams(video, lapinfo))
 
-        self.newfname = os.path.join(outputdir, "lap_%s_%s.noaudio.avi" % (
-            videolaps[0][1]["lap"].lapnum,
-            videolaps[0][1]["lap"].lap_time))
-
-        self.final_newfname = os.path.join(outputdir, "lap_%s_%s.avi" % (
-            videolaps[0][1]["lap"].lapnum,
-            videolaps[0][1]["lap"].lap_time))
+        self.set_video_name(0)
 
         self.fps = videolaps[0][0].fps
         self.width = videolaps[0][0].width
         self.height = videolaps[0][0].height
+
+    def set_render_laps_uniquely(self, render_laps_uniquely):
+        self.render_laps_uniquely = render_laps_uniquely
+
+    def set_video_name(self, lapnum=0):
+        self.newfname = os.path.join(self.outputdir, "lap_%s_%s.noaudio.avi" % (
+            self.videolaps[lapnum][1]["lap"].lapnum,
+            self.videolaps[lapnum][1]["lap"].lap_time))
+
+        self.final_newfname = os.path.join(self.outputdir, "lap_%s_%s.avi" % (
+            self.videolaps[lapnum][1]["lap"].lapnum,
+            self.videolaps[lapnum][1]["lap"].lap_time))
+
+    def get_videos(self):
+        self.all_laps = self.laps
+        for lapnum, lap in enumerate(self.all_laps):
+            self.laps = [lap]
+            self.set_video_name(lapnum)
+            yield lap
+
+        self.set_video_name(0)
 
     def set_bookend_time(self, btime):
         for lap in self.laps:
@@ -555,8 +578,7 @@ class RenderParams(object):
             self.capstate[cap] = framenum
             return cap.read()
         else:
-            print "SEEKING..."
-            print framenum, cap_last_postion
+            logger.debug("SEEKING... %s, %s" % (framenum, cap_last_postion))
             cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
             self.capstate[cap] = framenum
             return cap.read()

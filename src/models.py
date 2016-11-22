@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from utils import creation_time, within_x_sec, gopro_video_names_in_order, extract_audio
 
 
+from renderers import LapRenderParams
 from renderers.basic import BasicRenderer
 from renderers.likeharrys import LikeHarrysRenderer
 
@@ -40,7 +41,7 @@ class Video(object):
         self.height = None
         self.duration = None
         self.matched_laps = []
-        self.frame_offset = -28
+        self.frame_offset = 0
         self._calc_times()
         self.trackname = ""
 
@@ -144,7 +145,8 @@ class Video(object):
         print "# MANUAL OFFSET CALIBRATION "
         print "#" * 100
         print """In a moment a window will appear which shows the first frame of the lap.  This frame may be offset from the actual start of the lap due to the difference in the block on your laptimer and your camera."""
-        print "\nUse the arrow keys to move the video forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames)."
+        print "\nUse the left/right arrow keys to move the video forward and backwards by 1 frame, or page up and page down to move forward and backwards by ten seconds (300 frames)."
+        print "\nUse the up/down arrow keys to move the video sync back and fourth by one frame."
         print "\nHold shift and the arrow keys or page up and page down to move the video sync by the appropriate amount."
         print "\nPress space to start and stop playback and test the video sync"
         print "\nPress Enter when finished syncing\n"
@@ -174,7 +176,7 @@ class Video(object):
         SPACE = 32
         W_KEY = 119
         Q_KEY = 113
-        offset = -28
+        offset = 0
         framenum = start_framenum + offset
         playing = False
 
@@ -192,7 +194,8 @@ class Video(object):
                 lapinfo = self.find_lap_by_framenum(framenum + offset) or self.matched_laps[0]
 
                 lap_start_framenum = lapinfo['start_frame'] + offset
-                frame = renderer.render_frame(frame, lap_start_framenum, framenum, lapinfo['lap'])
+                params = LapRenderParams(self, lapinfo)
+                frame = renderer.render_frame(frame, params, framenum, lapinfo['lap'])
                 cv2.imshow('frame', frame)
                 if playing:
                     wait = 1

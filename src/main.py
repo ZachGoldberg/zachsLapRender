@@ -3,7 +3,7 @@ import logging
 import parsers
 import sys
 from picker import Picker
-
+from threading import Thread
 
 from models import Fix, Lap, Session, Day
 from renderers import LikeHarrysRenderer
@@ -207,17 +207,21 @@ if __name__ == '__main__':
         dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
         split_video = dr.render_laps(args.outputdir or "/tmp/",
                                      args.show_video,
-                                     args.bookend_time)
+                                     args.bookend_time,
+                                     render_laps_uniquely=False)
         if args.youtube:
             video_id = youtube.upload_video(split_video)
             print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
     else:
         for video in matched_videos:
             renderer = LikeHarrysRenderer(video)
-            lapvideos = renderer.render_laps(args.outputdir or "/tmp/",
-                                             args.show_video,
-                                             args.bookend_time)
-            if args.youtube:
-                for lapvideo in lapvideos:
-                    video_id = youtube.upload_video(lapvideo)
-                    print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+            for lapvideo in renderer.render_laps(args.outputdir or "/tmp/",
+                                                 args.show_video,
+                                                 args.bookend_time,
+                                                 render_laps_uniquely=True):
+                if args.youtube:
+                    def upload(lapvideo):
+                        print "Uploading %s to youtube..." % lapvideo
+                        video_id = youtube.upload_video(lapvideo)
+                        print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+                    Thread(target=upload, args=(lapvideo,)).start()
