@@ -130,7 +130,7 @@ class DualRenderer(BaseRenderer):
 
             merged_frame = self.merge_frames(frame1, frame2)
             self.render_frame(merged_frame,
-                              (lp1.start_frame, lp2.start_frame),
+                              (lp1, lp2),
                               (framenum1, framenum2),
                               (lp1.lapinfo['lap'], lp2.lapinfo['lap']))
 
@@ -147,14 +147,23 @@ class DualRenderer(BaseRenderer):
 
 
     def render_frame(self, frame,
-                     starts,
+                     lapparams,
                      framenums,
                      laps):
+        if not lapparams[0].is_mid_lap(framenums[0]):
+            return frame
+
+        starts = [lapparams[0].lap_start_frame, lapparams[1].lap_start_frame]
+
         color1 = (255, 255, 100)
         color2 = (255, 150, 100)
 
-        seconds_in1 = (framenums[0] - starts[0]) / self.video1.fps
-        seconds_in2 = (framenums[1] - starts[1]) / self.video2.fps
+        start_frame1 = lapparams[0].lap_start_frame
+        start_frame2 = lapparams[1].lap_start_frame
+        frames_in1 = framenums[0] - lapparams[0].lap_start_frame
+        frames_in2 = framenums[1] - lapparams[1].lap_start_frame
+        seconds_in1 = frames_in1 / self.video1.fps
+        seconds_in2 = frames_in2 / self.video2.fps
 
         distance1 = laps[0].get_distance_at_time(seconds_in1)
         t_distance1 = laps[0].total_distance

@@ -429,7 +429,7 @@ class BaseRenderer(object):
                     render_laps_uniquely=True):
         params = self._get_render_params(outputdir)
         if not params:
-            params = RenderParams()
+            params = RenderParams([], outputdir)
 
 
         params.set_bookend_time(bookend_time)
@@ -524,14 +524,18 @@ class RenderParams(object):
 
         self.set_video_name(0)
 
-        self.fps = videolaps[0][0].fps
-        self.width = videolaps[0][0].width
-        self.height = videolaps[0][0].height
+        if videolaps:
+            self.fps = videolaps[0][0].fps
+            self.width = videolaps[0][0].width
+            self.height = videolaps[0][0].height
 
     def set_render_laps_uniquely(self, render_laps_uniquely):
         self.render_laps_uniquely = render_laps_uniquely
 
     def set_video_name(self, lapnum=0):
+        if not self.videolaps:
+            return
+
         self.newfname = os.path.join(self.outputdir, "lap_%s_%s.noaudio.avi" % (
             self.videolaps[lapnum][1]["lap"].lapnum,
             self.videolaps[lapnum][1]["lap"].lap_time))
