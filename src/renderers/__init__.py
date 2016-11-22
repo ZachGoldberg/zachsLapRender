@@ -429,11 +429,11 @@ class BaseRenderer(object):
                     render_laps_uniquely=True):
         params = self._get_render_params(outputdir)
         if not params:
-            params = []
-        else:
-            params.set_bookend_time(bookend_time)
-            params.set_render_laps_uniquely(render_laps_uniquely)
+            params = RenderParams()
 
+
+        params.set_bookend_time(bookend_time)
+        params.set_render_laps_uniquely(render_laps_uniquely)
 
         for lap in params.get_videos():
             logger.info("Rendering %s..." % (params.newfname))
@@ -541,13 +541,18 @@ class RenderParams(object):
             self.videolaps[lapnum][1]["lap"].lap_time))
 
     def get_videos(self):
-        self.all_laps = self.laps
-        for lapnum, lap in enumerate(self.all_laps):
-            self.laps = [lap]
-            self.set_video_name(lapnum)
-            yield lap
+        if not self.render_laps_uniquely:
+            for lap in self.laps:
+                yield lap
+        else:
+            self.all_laps = self.laps
+            for lapnum, lap in enumerate(self.all_laps):
+                self.laps = [lap]
+                self.set_video_name(lapnum)
+                yield lap
 
-        self.set_video_name(0)
+            self.set_video_name(0)
+
 
     def set_bookend_time(self, btime):
         for lap in self.laps:

@@ -100,7 +100,7 @@ class DualRenderer(BaseRenderer):
             if framenum1 <= lp1.end_frame:
                 ret1, frame1 = params.get_framenum(lp1, framenum1)
                 def render_vid(val):
-                    self.renderer1.render_frame(frame1, lp1.start_frame, framenum1, lp1.lapinfo["lap"])
+                    self.renderer1.render_frame(frame1, lp1, framenum1, lp1.lapinfo["lap"])
                     val['frame'] = frame1
 
                 thread1 = Thread(target=render_vid, args=(t1val, ))
@@ -112,7 +112,7 @@ class DualRenderer(BaseRenderer):
             if framenum2 <= lp2.end_frame:
                 ret2, frame2 = params.get_framenum(lp2, framenum2, 1)
                 def render_vid2(val):
-                    self.renderer2.render_frame(frame2, lp2.start_frame, framenum2, lp2.lapinfo["lap"])
+                    self.renderer2.render_frame(frame2, lp2, framenum2, lp2.lapinfo["lap"])
                     val['frame'] = frame2
 
                 thread2 = Thread(target=render_vid2, args=(t2val, ))

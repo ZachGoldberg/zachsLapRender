@@ -67,6 +67,10 @@ def build_parser():
                         dest="all_laps", action='store_true',
                         help="Render all found laps (default is to allow user choice)")
 
+    parser.add_argument("-s", "--render-sessions",
+                        dest="render_sessions", action='store_true',
+                        help="Render one video per session (i.e. per input video)")
+
     parser.add_argument("-c", "--lap-comparison",
                         dest="lap_comparison", action='store_true',
                         help="Render 2 laps one ontop of the other")
@@ -183,7 +187,7 @@ if __name__ == '__main__':
         youtube.get_authenticated_service()
 
 
-    if not args.all_laps or args.lap_comparison:
+    if (not args.all_laps and not args.render_sessions) or args.lap_comparison:
         select_laps_to_render(matched_videos, args.lap_comparison)
 
     if args.manual_offset:
@@ -196,6 +200,10 @@ if __name__ == '__main__':
             if has_renderable_laps:
                 video.calibrate_offset()
 
+    def upload(lapvideo):
+        print "Uploading %s to youtube..." % lapvideo
+        video_id = youtube.upload_video(lapvideo)
+        print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
 
     if args.lap_comparison:
         dual_vids = [v for v in matched_videos if v.renderable_laps()]
@@ -205,23 +213,18 @@ if __name__ == '__main__':
         from renderers.dual import DualRenderer
         from renderers.likeharrys import LikeHarrysRenderer
         dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-        split_video = dr.render_laps(args.outputdir or "/tmp/",
-                                     args.show_video,
-                                     args.bookend_time,
-                                     render_laps_uniquely=False)
-        if args.youtube:
-            video_id = youtube.upload_video(split_video)
-            print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
+        for video in dr.render_laps(args.outputdir or "/tmp/",
+                                    args.show_video,
+                                    args.bookend_time,
+                                    render_laps_uniquely=False):
+            if args.youtube:
+                Thread(target=upload, args=(lapvideo,)).start()
     else:
         for video in matched_videos:
             renderer = LikeHarrysRenderer(video)
             for lapvideo in renderer.render_laps(args.outputdir or "/tmp/",
                                                  args.show_video,
                                                  args.bookend_time,
-                                                 render_laps_uniquely=True):
+                                                 render_laps_uniquely=(not args.render_sessions)):
                 if args.youtube:
-                    def upload(lapvideo):
-                        print "Uploading %s to youtube..." % lapvideo
-                        video_id = youtube.upload_video(lapvideo)
-                        print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
                     Thread(target=upload, args=(lapvideo,)).start()
