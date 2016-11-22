@@ -564,11 +564,15 @@ class RenderParams(object):
         # If it's the next frame, call read.  Otherwise, seek and read
 
         # Figure out which file in that video this is
+        framenum = int(framenum)
         fileindex = lapparams.video.filename_number(framenum)
 
         video_fname = self.oldcaps_f[lapparams.video][fileindex]
         video_caps = self.oldcaps[lapparams.video]
         cap_sequence = video_caps[fileindex]
+
+        for i in range(0, fileindex):
+            framenum -= lapparams.video.file_frame_boundaries[i]
 
         while len(cap_sequence) <= open_index:
             cap = cv2.VideoCapture(video_fname)

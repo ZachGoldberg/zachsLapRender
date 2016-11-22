@@ -213,7 +213,7 @@ if __name__ == '__main__':
         from renderers.dual import DualRenderer
         from renderers.likeharrys import LikeHarrysRenderer
         dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-        for video in dr.render_laps(args.outputdir or "/tmp/",
+        for lapvideo in dr.render_laps(args.outputdir or "/tmp/",
                                     args.show_video,
                                     args.bookend_time,
                                     render_laps_uniquely=False):

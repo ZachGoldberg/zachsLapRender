@@ -18,14 +18,13 @@ Requirements:
 
 TODO:
  - Render a whole session at a time
+ - Show current and last laptime in a box somewhere
  - Upload multiple laps to a YT Folder
  - Change color of g-force ball depending on Gs
  - Show filename and lap number in screen
  - Show previous laptime in bold letters
- - Show current and last laptime in a box somewhere
  - Store offsets in some kind of config / preference file so I dont have to do it
  everytime during testing...
- - Upload videos in parallel after rendering
  - Options for MPH vs KPH
  - Show predictive laptime throughout the lap, compared to best of the day
  - Show splits if they exist
