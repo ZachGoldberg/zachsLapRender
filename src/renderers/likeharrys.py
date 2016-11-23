@@ -248,7 +248,7 @@ class LikeHarrysRenderer(BaseRenderer):
                                fillColor=(50, 50, 50))
 
         txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
-        self.text(frame, "Current",
+        self.text(frame, "Current (Lap #%s/%s)" % (lapnumber + 1, len(params.laps)),
                   (topLeft[0] + margin * 3,
                    self.from_bottom(156)),
                   cv2.FONT_HERSHEY_PLAIN, 1,
