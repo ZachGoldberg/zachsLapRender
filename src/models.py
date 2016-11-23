@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from utils import creation_time, within_x_sec, gopro_video_names_in_order, extract_audio
 
 
-from renderers import LapRenderParams
+from renderers import RenderParams, LapRenderParams
 from renderers.basic import BasicRenderer
 from renderers.likeharrys import LikeHarrysRenderer
 
@@ -194,8 +194,10 @@ class Video(object):
                 lapinfo = self.find_lap_by_framenum(framenum + offset) or self.matched_laps[0]
 
                 lap_start_framenum = lapinfo['start_frame'] + offset
-                params = LapRenderParams(self, lapinfo)
-                frame = renderer.render_frame(frame, params, framenum, lapinfo['lap'])
+                params = RenderParams([], "")
+                lapparams = LapRenderParams(self, lapinfo)
+                params.laps = [lapparams]
+                frame = renderer.render_frame(frame, params, lapparams, framenum, lapinfo['lap'])
                 cv2.imshow('frame', frame)
                 if playing:
                     wait = 1

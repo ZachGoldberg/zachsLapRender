@@ -1,7 +1,9 @@
 import argparse
 import logging
 import parsers
+import os
 import sys
+from gooey import Gooey, GooeyParser
 from picker import Picker
 from threading import Thread
 
@@ -17,10 +19,16 @@ logging.basicConfig(level=logging.WARNING,
 
 logger = logging.getLogger(__name__)
 
+# Setup unbuffered stdout for packaging purposes
+nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+sys.stdout = nonbuffered_stdout
+
+@Gooey
+def build_parser_gui():
+    return build_parser()
 
 def build_parser():
-
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = GooeyParser(description='Render really cool racing videos with telemetry overlays')
 
     parser.add_argument('--analyze-data',
                         dest='analyze_data', action='store_true',
@@ -33,10 +41,12 @@ def build_parser():
 
     parser.add_argument('--input-data-file', dest='datafile',
                         type=argparse.FileType('r'),
+                        widget="FileChooser",
                         help='Input structured data telemetry file')
 
     parser.add_argument('-vd', '--video-directory', dest='videodir',
                         type=str,
+                        widget="DirChooser",
                         help='Folder containing videos with timestamps synced to telemetry')
 
     parser.add_argument("-v", '--verbose', dest='info_verbose',
@@ -49,6 +59,7 @@ def build_parser():
 
     parser.add_argument("-o", "--output-directory",
                         dest="outputdir", type=str,
+                        widget="DirChooser",
                         help="Output directory for generated videos")
 
     parser.add_argument("-t", "--trackname",
@@ -133,7 +144,10 @@ def select_laps_to_render(videos, lap_comparison_mode=False):
 
 if __name__ == '__main__':
     # Do things with argparse
-    args = build_parser().parse_args()
+    if len(sys.argv) > 1:
+        args = build_parser().parse_args()
+    else:
+        args = build_parser_gui().parse_args()
 
     if args.info_verbose:
         logging.getLogger().setLevel(logging.INFO)
