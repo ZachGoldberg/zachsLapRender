@@ -390,7 +390,7 @@ class BaseRenderer(object):
                     delta = time.time() - last_time
                     last_time = time.time()
                     logger.debug("Written %s/%s frames, %s fps..." % (frames_writen,
-                                                                      lapparams.total_frames,
+                                                                      params.total_frames(),
                                                                       (30 / delta)))
 
         logger.debug("Buttoning up video...")
@@ -430,7 +430,6 @@ class BaseRenderer(object):
         params = self._get_render_params(outputdir)
         if not params:
             params = RenderParams([], outputdir)
-
 
         params.set_bookend_time(bookend_time)
         params.set_render_laps_uniquely(render_laps_uniquely)
@@ -492,7 +491,7 @@ class LapRenderParams(object):
         if self.end_frame > video.frame_count:
             self.end_frame = video.frame_count
 
-        self.total_frames = self.end_frame - self.start_frame
+        self.total_frames = int(self.end_frame - self.start_frame)
         self.duration = self.total_frames / video.fps
 
     def is_mid_lap(self, framenum):
@@ -546,8 +545,7 @@ class RenderParams(object):
 
     def get_videos(self):
         if not self.render_laps_uniquely:
-            for lap in self.laps:
-                yield lap
+            yield self.laps
         else:
             self.all_laps = self.laps
             for lapnum, lap in enumerate(self.all_laps):
@@ -557,6 +555,12 @@ class RenderParams(object):
 
             self.set_video_name(0)
 
+    def total_frames(self):
+        frames = 0
+        for lap in self.laps:
+            frames += lap.total_frames
+
+        return int(frames)
 
     def set_bookend_time(self, btime):
         for lap in self.laps:
