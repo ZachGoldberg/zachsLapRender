@@ -360,6 +360,7 @@ class BaseRenderer(object):
                     ret, frame = params.get_framenum(lapparams, t_framenum)
 
                     rendered_frame = self.render_frame(frame,
+                                                       params,
                                                        lapparams,
                                                        t_framenum,
                                                        lapparams.lapinfo["lap"])
@@ -441,6 +442,7 @@ class BaseRenderer(object):
             fourcc = cv2.cv.CV_FOURCC(*'XVID')
             out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
                                                                         params.height))
+
             self._render_video_file(out, params, show_video=show_video)
             out.release()
 
@@ -494,6 +496,13 @@ class LapRenderParams(object):
         self.total_frames = int(self.end_frame - self.start_frame)
         self.duration = self.total_frames / video.fps
 
+    def lap_time(self):
+        return self.lapinfo['lap'].lap_time
+
+    def seconds_into_lap(self, framenum):
+        frames_in = framenum - self.lap_start_frame
+        return frames_in / self.video.fps
+
     def is_mid_lap(self, framenum):
         return self.lap_start_frame < framenum < self.lap_end_frame
 
@@ -530,6 +539,17 @@ class RenderParams(object):
 
     def set_render_laps_uniquely(self, render_laps_uniquely):
         self.render_laps_uniquely = render_laps_uniquely
+
+    def fastest_lap(self):
+        fastest_time = self.laps[0].lap_time()
+        fastest_lap = self.laps[0]
+
+        for lap in self.laps[1:]:
+            if lap.lap_time() < fastest_time:
+                fastest_time = lap.lap_time()
+                fastest_lap = lap
+
+        return fastest_lap
 
     def set_video_name(self, lapnum=0):
         if not self.videolaps:

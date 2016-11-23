@@ -7,7 +7,7 @@ class BasicRenderer(BaseRenderer):
     def __init__(self, video):
         super(BasicRenderer, self).__init__(video)
 
-    def render_frame(self, frame, lapparams, framenum, lap):
+    def render_frame(self, frame, params, lapparams, framenum, lap):
         if not lapparams.is_mid_lap(framenum):
             return frame
 

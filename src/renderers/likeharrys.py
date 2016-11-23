@@ -10,15 +10,14 @@ class LikeHarrysRenderer(BaseRenderer):
     def __init__(self, video):
         super(LikeHarrysRenderer, self).__init__(video)
 
-    def render_frame(self, frame, lapparams, framenum, lap):
+    def render_frame(self, frame, params, lapparams, framenum, lap):
         if not lapparams.is_mid_lap(framenum):
             with self.alpha(0.1, frame):
                 self.draw_countdown(frame, lapparams, framenum, lap)
                 return frame
 
         start_frame = lapparams.lap_start_frame
-        frames_in = framenum - lapparams.lap_start_frame
-        seconds_total_in = frames_in / self.video.fps
+        seconds_total_in = lapparams.seconds_into_lap(framenum)
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
 
@@ -125,21 +124,25 @@ class LikeHarrysRenderer(BaseRenderer):
             bottomRight = [(margin + g_meter_right_edge + meter_width),
                            self.from_bottom(110)]
 
-            self.rounded_rectangle(frame,
-                                   topLeft, bottomRight,
-                                   (255, 255, 255),
-                                   1,
-                                   cv2.CV_AA,
-                                   10,
-                                   fill=True,
-                                   fillColor=(50, 50, 50))
+            if len(params.laps) > 1:
+                self.render_lapboard(frame, params, lapparams, framenum,
+                                     (topLeft[0], topLeft[1] - 90), bottomRight)
+            else:
+                self.rounded_rectangle(frame,
+                                       topLeft, bottomRight,
+                                       (255, 255, 255),
+                                       1,
+                                       cv2.CV_AA,
+                                       10,
+                                       fill=True,
+                                       fillColor=(50, 50, 50))
 
-            txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
-            self.text(frame, txt,
-                            (topLeft[0] + margin * 3,
-                             self.from_bottom(130)),
-                            cv2.FONT_HERSHEY_PLAIN, 2.5,
-                            (255, 255, 255), 2, cv2.CV_AA)
+                txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+                self.text(frame, txt,
+                          (topLeft[0] + margin * 3,
+                           self.from_bottom(130)),
+                          cv2.FONT_HERSHEY_PLAIN, 2.5,
+                          (255, 255, 255), 2, cv2.CV_AA)
 
 
 
@@ -210,3 +213,73 @@ class LikeHarrysRenderer(BaseRenderer):
         self.draw_map(frame, start_frame, framenum, lap)
 
         return frame
+
+
+    def render_lapboard(self, frame, params, lapparams, framenum, topLeft, bottomRight):
+        seconds_total_in = lapparams.seconds_into_lap(framenum)
+        minutes_in = int(seconds_total_in / 60)
+        seconds_in = seconds_total_in % 60
+
+        fastest_lap = params.fastest_lap()
+        minutes = int(fastest_lap.lap_time() / 60)
+        seconds = fastest_lap.lap_time() % 60
+        fast_lap_time = "%.2d:%05.2f" % (minutes, seconds)
+
+        lapnumber = params.laps.index(lapparams)
+        last_lap_time = "N/A"
+        if lapnumber > 0:
+            lastlap = params.laps[lapnumber - 1]
+            minutes = int(lastlap.lap_time() / 60)
+            seconds = lastlap.lap_time() % 60
+            last_lap_time = "%.2d:%05.2f" % (minutes, seconds)
+
+
+
+        margin = 5
+
+        self.rounded_rectangle(frame,
+                               topLeft,
+                               bottomRight,
+                               (255, 255, 255),
+                               1,
+                               cv2.CV_AA,
+                               10,
+                               fill=True,
+                               fillColor=(50, 50, 50))
+
+        txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+        self.text(frame, "Current",
+                  (topLeft[0] + margin * 3,
+                   self.from_bottom(156)),
+                  cv2.FONT_HERSHEY_PLAIN, 1,
+                  (255, 255, 255), 1, cv2.CV_AA)
+        self.text(frame, txt,
+                (topLeft[0] + margin * 3,
+                 self.from_bottom(120)),
+                  cv2.FONT_HERSHEY_PLAIN, 2.5,
+                  (255, 255, 255), 2, cv2.CV_AA)
+
+
+        self.text(frame, "Fastest: ",
+                  (topLeft[0] + margin * 3,
+                   self.from_bottom(200)),
+                  cv2.FONT_HERSHEY_PLAIN, 1,
+                  (255, 255, 255), 1, cv2.CV_AA)
+
+        self.text(frame, fast_lap_time,
+                (topLeft[0] + margin * 3,
+                 self.from_bottom(173)),
+                  cv2.FONT_HERSHEY_PLAIN, 2,
+                  (255, 255, 255), 1, cv2.CV_AA)
+
+        self.text(frame, "Last: ",
+                  (topLeft[0] + margin * 3,
+                   self.from_bottom(245)),
+                  cv2.FONT_HERSHEY_PLAIN, 1,
+                  (255, 255, 255), 1, cv2.CV_AA)
+
+        self.text(frame, last_lap_time,
+                (topLeft[0] + margin * 3,
+                 self.from_bottom(217)),
+                  cv2.FONT_HERSHEY_PLAIN, 2,
+                  (255, 255, 255), 1, cv2.CV_AA)
