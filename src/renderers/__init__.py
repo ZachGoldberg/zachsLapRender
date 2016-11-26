@@ -521,7 +521,7 @@ class LapRenderParams(object):
         return frames_in / self.video.fps
 
     def is_mid_lap(self, framenum):
-        return self.lap_start_frame < framenum < self.lap_end_frame
+        return self.lap_start_frame <= framenum <= self.lap_end_frame
 
     def time_before_lap(self, framenum):
         return (self.lap_start_frame - framenum) / self.video.fps
