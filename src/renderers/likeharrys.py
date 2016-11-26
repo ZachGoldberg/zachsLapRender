@@ -11,16 +11,16 @@ class LikeHarrysRenderer(BaseRenderer):
         super(LikeHarrysRenderer, self).__init__(video)
 
     def render_frame(self, frame, params, lapparams, framenum, lap):
-        if not lapparams.is_mid_lap(framenum):
+        if lapparams.is_pre_lap(framenum):
             with self.alpha(0.1, frame):
                 self.draw_countdown(frame, lapparams, framenum, lap)
                 return frame
+
 
         start_frame = lapparams.lap_start_frame
         seconds_total_in = lapparams.seconds_into_lap(framenum)
         minutes_in = int(seconds_total_in / 60)
         seconds_in = seconds_total_in % 60
-
 
         # See if we have any vmin/vmax annotations
         speedinfo = lap.get_nearest_speed_direction_change(
@@ -137,7 +137,15 @@ class LikeHarrysRenderer(BaseRenderer):
                                        fill=True,
                                        fillColor=(50, 50, 50))
 
-                txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+
+                if lapparams.is_post_lap(framenum):
+                    # Show lap time not current time
+                    laptime = lapparams.lapinfo['lap'].lap_time
+                    minutes = laptime / 60
+                    seconds = laptime % 60
+                    txt = "%.2d:%05.2f" % (minutes, seconds)
+                else:
+                    txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
                 self.text(frame, txt,
                           (topLeft[0] + margin * 3,
                            self.from_bottom(130)),
@@ -233,8 +241,6 @@ class LikeHarrysRenderer(BaseRenderer):
             seconds = lastlap.lap_time() % 60
             last_lap_time = "%.2d:%05.2f" % (minutes, seconds)
 
-
-
         margin = 5
 
         self.rounded_rectangle(frame,
@@ -247,7 +253,15 @@ class LikeHarrysRenderer(BaseRenderer):
                                fill=True,
                                fillColor=(50, 50, 50))
 
-        txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+        if lapparams.is_post_lap(framenum):
+            # Show lap time not current time
+            laptime = lapparams.lapinfo['lap'].lap_time
+            minutes = laptime / 60
+            seconds = laptime % 60
+            txt = "%.2d:%05.2f" % (minutes, seconds)
+        else:
+            txt = "%.2d:%05.2f" % (minutes_in, seconds_in)
+
         self.text(frame, "Current (Lap #%s/%s)" % (lapnumber + 1, len(params.laps)),
                   (topLeft[0] + margin * 3,
                    self.from_bottom(156)),

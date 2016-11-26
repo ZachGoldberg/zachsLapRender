@@ -451,6 +451,9 @@ class BaseRenderer(object):
         params.set_bookend_time(bookend_time)
 
         for lap in params.get_videos():
+            if not lap:
+                continue
+
             logger.info("Rendering %s..." % (params.newfname))
 
             # Create a new videowriter file
@@ -522,6 +525,12 @@ class LapRenderParams(object):
 
     def is_mid_lap(self, framenum):
         return self.lap_start_frame <= framenum <= self.lap_end_frame
+
+    def is_pre_lap(self, framenum):
+        return framenum < self.lap_start_frame
+
+    def is_post_lap(self, framenum):
+        return framenum > self.lap_end_frame
 
     def time_before_lap(self, framenum):
         return (self.lap_start_frame - framenum) / self.video.fps
@@ -608,7 +617,7 @@ class RenderParams(object):
         else:
             if len(self.laps) == 1:
                 self.laps[0].set_bookend_time(btime)
-            else:
+            elif len(self.laps) > 0:
                 self.laps[0].set_bookend_time(btime, True, False)
                 self.laps[-1].set_bookend_time(btime, False, True)
 

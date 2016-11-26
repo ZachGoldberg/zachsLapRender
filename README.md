@@ -18,8 +18,6 @@ Requirements:
 
 TODO:
  - Fix audio for 2nd half of "split" gopro videos
- - Show laptimes in post-lap bookend time
- - Select which session to render a whole session at a time
  - Upload multiple laps to a YT Folder
  - Change color of g-force ball depending on Gs
  - Show filename and lap number in screen

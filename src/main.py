@@ -91,7 +91,7 @@ def build_parser():
 
     parser.add_argument("-a", "--all-laps",
                         dest="all_laps", action='store_true',
-                        help="Render all found laps (default is to allow user choice)")
+                        help="Render all found laps (or sessions with -s) (default is to allow user choice)")
 
     parser.add_argument("-s", "--render-sessions",
                         dest="render_sessions", action='store_true',
@@ -130,7 +130,41 @@ def print_video_stats(videos):
         for lap in video.matched_laps:
             print lap['lap']
 
-def select_laps_to_render(videos, lap_comparison_mode=False):
+
+def select_sessions_to_render(videos):
+    s_videos = {}
+    for video in videos:
+        key = str(video)
+        s_videos[key] = video
+        for lap in video.matched_laps:
+            lap["render"] = False
+
+    keys = s_videos.keys()
+    keys.sort()
+
+    title = 'Select sessions to render'
+
+    picker = Picker(
+        title = title,
+        options = keys
+    )
+    picker.window_width = 150
+    picker.window_height = 30
+    picker.start()
+    opts = picker.getSelected()
+
+    for videoname in opts:
+        video = s_videos[videoname]
+        for lap in video.matched_laps:
+            lap['render'] = True
+
+
+
+def select_laps_to_render(videos, lap_comparison_mode=False,
+                          select_sessions=False):
+    if select_sessions:
+        return select_sessions_to_render(videos)
+
     laps = {}
     for video in videos:
         for lap in video.matched_laps:
@@ -146,10 +180,12 @@ def select_laps_to_render(videos, lap_comparison_mode=False):
     if lap_comparison_mode:
         title = "Select at most 2 laps to render in side-by-side mode"
 
-    opts = Picker(
+    picker = Picker(
         title = title,
         options = keys
-    ).getSelected()
+    )
+    picker.start()
+    opts = picker.getSelected()
 
     if lap_comparison_mode:
         opts = opts[:2]
@@ -227,8 +263,8 @@ if __name__ == '__main__':
         youtube.get_authenticated_service()
 
 
-    if (not args.all_laps and not args.render_sessions) or args.lap_comparison:
-        select_laps_to_render(matched_videos, args.lap_comparison)
+    if not args.all_laps or args.lap_comparison:
+        select_laps_to_render(matched_videos, args.lap_comparison, args.render_sessions)
 
     if args.manual_offset or args.force_manual_offset:
         for video in matched_videos:
