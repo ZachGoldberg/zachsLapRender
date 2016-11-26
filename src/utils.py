@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import tempfile
 import tzlocal
 import wave
 
@@ -108,10 +109,9 @@ def combine_audio(sources, outfile):
     new_audio.close()
 
 
-
-
 def extract_audio(source, newaudiofile, start_time, duration):
-    tmpaudiofile = "/tmp/zachsaudio.wav"
+    tmpaudiofile = "%s.wav" % tempfile.NamedTemporaryFile().name
+
     subprocess.call(
         "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (source, tmpaudiofile),
         shell=True)
@@ -138,6 +138,7 @@ def extract_audio(source, newaudiofile, start_time, duration):
 
     new_audio.close()
     old_audio.close()
+    os.unlink(tmpaudiofile)
 
 
 def haversine(lon1, lat1, lon2, lat2):

@@ -410,10 +410,10 @@ class BaseRenderer(object):
         for lap in params.laps:
             outfile = tempfile.NamedTemporaryFile().name
             tempfiles.append(outfile)
-            extract_audio(params.laps[0].video.filenames[0],
+            extract_audio(lap.video.filenames[0],
                           outfile,
-                          params.laps[0].start_time,
-                          params.laps[0].duration)
+                          lap.start_time,
+                          lap.duration)
 
         combine_audio(tempfiles, newaudiofile)
 
