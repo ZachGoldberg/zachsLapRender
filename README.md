@@ -17,16 +17,13 @@ Requirements:
 
 
 TODO:
- - Fix audio for 2nd half of "split" gopro videos
+ - Store offsets in some kind of config / preference file per video
+- Fix audio for 2nd half of "split" gopro videos
  - Show laptimes in post-lap bookend time
- - Render a whole session at a time
- - Show current and last laptime in a box somewhere
+ - Select which session to render a whole session at a time
  - Upload multiple laps to a YT Folder
  - Change color of g-force ball depending on Gs
  - Show filename and lap number in screen
- - Show previous laptime in bold letters
- - Store offsets in some kind of config / preference file so I dont have to do it
- everytime during testing...
  - Options for MPH vs KPH
  - Show predictive laptime throughout the lap, compared to best of the day
  - Show splits if they exist

@@ -130,6 +130,7 @@ class DualRenderer(BaseRenderer):
 
             merged_frame = self.merge_frames(frame1, frame2)
             self.render_frame(merged_frame,
+                              params,
                               (lp1, lp2),
                               (framenum1, framenum2),
                               (lp1.lapinfo['lap'], lp2.lapinfo['lap']))

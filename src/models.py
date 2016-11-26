@@ -137,7 +137,7 @@ class Video(object):
 
     def calibrate_offset(self):
         if not self.matched_laps:
-            return
+            return 0
 
         cap = cv2.VideoCapture(self.filenames[0])
         lapinfo = self.matched_laps[0]
@@ -176,18 +176,19 @@ class Video(object):
         SPACE = 32
         W_KEY = 119
         Q_KEY = 113
-        offset = 0
+        offset = self.frame_offset
         framenum = start_framenum + offset
         playing = False
 
         from renderers import CalibrationRenderer
 
         renderer = CalibrationRenderer(self)
-
+        movement = 1
         while(not end_calibration):
             print "Current Frame: %s, sync offset: %s" % (framenum, offset)
 
-            ret, frame = cap.read()
+            if movement != 0:
+                ret, frame = cap.read()
 
             if ret:
                 # Find which lap we're in based on framenum
@@ -213,7 +214,7 @@ class Video(object):
                     self.frame_offset = offset
                     cap.release()
                     cv2.destroyAllWindows()
-                    return
+                    return offset
                 elif keypress == SPACE:
                     playing = not playing
                 elif keypress == UP_KEY:

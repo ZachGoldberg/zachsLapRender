@@ -1,4 +1,5 @@
 import argparse
+import config
 import logging
 import parsers
 import os
@@ -22,6 +23,16 @@ logger = logging.getLogger(__name__)
 # Setup unbuffered stdout for packaging purposes
 nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 sys.stdout = nonbuffered_stdout
+
+def load_config():
+    path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
+    if not os.path.exists(path):
+        open(path, 'w').close()
+    return config.Config(file(path))
+
+def save_config(cfg):
+    path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
+    cfg.save(open(path, 'w'))
 
 @Gooey
 def build_parser_gui():
@@ -191,6 +202,17 @@ if __name__ == '__main__':
         if video.matched_laps:
             matched_videos.append(video)
 
+    cfg = load_config()
+    try:
+        offsets = cfg.offsets
+    except:
+        offsets = {}
+
+    for video in matched_videos:
+        video.frame_offset = offsets.get(video.filenames[0], 0) or 0
+
+
+
     if not matched_videos:
         print "No matching video/laps"
         sys.exit(1)
@@ -212,7 +234,10 @@ if __name__ == '__main__':
                     has_renderable_laps = True
                     break
             if has_renderable_laps:
-                video.calibrate_offset()
+                offset = video.calibrate_offset()
+                offsets[video.filenames[0]] = offset
+                cfg.offsets = offsets
+                save_config(cfg)
 
     def upload(lapvideo):
         print "Uploading %s to youtube..." % lapvideo
