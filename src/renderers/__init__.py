@@ -3,11 +3,12 @@ import logging
 import math
 import os
 import subprocess
+import tempfile
 import time
 from threading import Thread
 
 from contextlib import contextmanager
-from utils import extract_audio, mix_audiofiles
+from utils import extract_audio, combine_audio, mix_audiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -345,9 +346,9 @@ class BaseRenderer(object):
                   stroke=4)
 
     def _render_video_file(self, out, params, show_video=False):
+        frames_writen = 0
         for lapparams in params.laps:
             framenum = lapparams.start_frame
-            frames_writen = 0
             last_time = time.time()
 
             thread_results = []
@@ -390,9 +391,14 @@ class BaseRenderer(object):
                 if frames_writen % 30 == 0:
                     delta = time.time() - last_time
                     last_time = time.time()
-                    logger.debug("Written %s/%s frames, %s fps..." % (frames_writen,
-                                                                      params.total_frames(),
-                                                                      (30 / delta)))
+
+                    infile = os.path.basename(params.get_video_for_frame(lapparams, framenum))
+                    logger.debug("From %s lap %s, Written %s/%s frames, %s fps..." % (
+                        infile,
+                        int(lapparams.lapinfo['lap'].lapnum),
+                        frames_writen,
+                        params.total_frames(),
+                        (30 / delta)))
 
         logger.debug("Buttoning up video...")
         cv2.destroyAllWindows()
@@ -400,10 +406,19 @@ class BaseRenderer(object):
 
     def _render_audio_file(self, params, newaudiofile):
         logger.debug("Extracting audio...")
-        extract_audio(params.laps[0].video.filenames[0],
-                      newaudiofile,
-                      params.laps[0].start_time,
-                      params.laps[0].duration)
+        tempfiles = []
+        for lap in params.laps:
+            outfile = tempfile.NamedTemporaryFile().name
+            tempfiles.append(outfile)
+            extract_audio(params.laps[0].video.filenames[0],
+                          outfile,
+                          params.laps[0].start_time,
+                          params.laps[0].duration)
+
+        combine_audio(tempfiles, newaudiofile)
+
+        for temp in tempfiles:
+            os.unlink(temp)
 
     def _merge_audio_and_video(self, videofname, audiofname, outputfile):
         logger.debug("Merging video and audio data...")
@@ -432,8 +447,8 @@ class BaseRenderer(object):
         if not params:
             params = RenderParams([], outputdir)
 
-        params.set_bookend_time(bookend_time)
         params.set_render_laps_uniquely(render_laps_uniquely)
+        params.set_bookend_time(bookend_time)
 
         for lap in params.get_videos():
             logger.info("Rendering %s..." % (params.newfname))
@@ -473,14 +488,15 @@ class LapRenderParams(object):
         self.lap_start_time = self.start_time
         self.lap_end_frame = self.end_frame
 
-    def set_bookend_time(self, btime):
+    def set_bookend_time(self, btime, bookend_start=True, bookend_end=True):
         video = self.video
         lapinfo = self.lapinfo
 
         bookend_frames = btime * video.fps
 
-        self.start_frame = lapinfo['start_frame'] + video.frame_offset - bookend_frames
-        self.start_time = (self.start_frame / video.fps)
+        if bookend_start:
+            self.start_frame = lapinfo['start_frame'] + video.frame_offset - bookend_frames
+            self.start_time = (self.start_frame / video.fps)
 
         if self.start_frame < 0:
             self.start_frame = 0
@@ -488,7 +504,8 @@ class LapRenderParams(object):
         if self.start_time < 0:
             self.start_time = 0
 
-        self.end_frame = lapinfo['end_frame'] + video.frame_offset + bookend_frames
+        if bookend_end:
+            self.end_frame = lapinfo['end_frame'] + video.frame_offset + bookend_frames
 
         if self.end_frame > video.frame_count:
             self.end_frame = video.frame_count
@@ -583,8 +600,20 @@ class RenderParams(object):
         return int(frames)
 
     def set_bookend_time(self, btime):
-        for lap in self.laps:
-            lap.set_bookend_time(btime)
+        if self.render_laps_uniquely:
+            for lap in self.laps:
+                lap.set_bookend_time(btime)
+        else:
+            if len(self.laps) == 1:
+                self.laps[0].set_bookend_time(btime)
+            else:
+                self.laps[0].set_bookend_time(btime, True, False)
+                self.laps[-1].set_bookend_time(btime, False, True)
+
+    def get_video_for_frame(self, lapparams, framenum):
+        framenum = int(framenum)
+        fileindex = lapparams.video.filename_number(framenum)
+        return lapparams.video.filenames[fileindex]
 
     def get_framenum(self, lapparams, framenum, open_index=0):
         # Figure out what capture this is

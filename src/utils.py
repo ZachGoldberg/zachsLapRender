@@ -90,6 +90,26 @@ def mix_audiofiles(f1, f2, output):
 
     combined.export(output, format='wav')
 
+def combine_audio(sources, outfile):
+    new_audio = wave.open(outfile, 'wb')
+    old_audio = wave.open(sources[0], 'rb')
+
+    new_audio.setnchannels(old_audio.getnchannels())
+    new_audio.setsampwidth(old_audio.getsampwidth())
+    new_audio.setframerate(old_audio.getframerate())
+
+    old_audio.close()
+
+    for source in sources:
+        old_audio = wave.open(source, 'rb')
+        new_audio.writeframes(old_audio.readframes(old_audio.getnframes()))
+        old_audio.close()
+
+    new_audio.close()
+
+
+
+
 def extract_audio(source, newaudiofile, start_time, duration):
     tmpaudiofile = "/tmp/zachsaudio.wav"
     subprocess.call(
@@ -98,6 +118,7 @@ def extract_audio(source, newaudiofile, start_time, duration):
 
     old_audio = wave.open(tmpaudiofile, 'rb')
     new_audio = wave.open(newaudiofile, 'wb')
+
 
     framerate = old_audio.getframerate()
     start_frame = float(start_time * framerate)
