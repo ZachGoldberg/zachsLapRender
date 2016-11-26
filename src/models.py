@@ -176,8 +176,7 @@ class Video(object):
         SPACE = 32
         W_KEY = 119
         Q_KEY = 113
-        offset = self.frame_offset
-        framenum = start_framenum + offset
+        framenum = start_framenum + self.frame_offset
         playing = False
 
         from renderers import CalibrationRenderer
@@ -185,16 +184,15 @@ class Video(object):
         renderer = CalibrationRenderer(self)
         movement = 1
         while(not end_calibration):
-            print "Current Frame: %s, sync offset: %s" % (framenum, offset)
+            print "Current Frame: %s, sync offset: %s" % (framenum, self.frame_offset)
 
-            if movement != 0:
+            if movement != 0 or playing:
                 ret, frame = cap.read()
 
             if ret:
                 # Find which lap we're in based on framenum
-                lapinfo = self.find_lap_by_framenum(framenum + offset) or self.matched_laps[0]
-
-                lap_start_framenum = lapinfo['start_frame'] + offset
+                lapinfo = self.find_lap_by_framenum(
+                    framenum + self.frame_offset) or self.matched_laps[0]
                 params = RenderParams([], "")
                 lapparams = LapRenderParams(self, lapinfo)
                 params.laps = [lapparams]
@@ -211,24 +209,21 @@ class Video(object):
                 if keypress == -1:
                     framenum += 1
                 elif keypress == ENTER:
-                    self.frame_offset = offset
                     cap.release()
                     cv2.destroyAllWindows()
-                    return offset
+                    return self.frame_offset
                 elif keypress == SPACE:
                     playing = not playing
                 elif keypress == UP_KEY:
-                    offset += 1
-                    framenum += 1
+                    self.frame_offset += 1
                     cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
                 elif keypress == DOWN_KEY:
-                    offset -= 1
-                    framenum -= 1
+                    self.frame_offset -= 1
                     cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, framenum)
                 else:
                     movement = KEY_DELTA.get(keypress, 0)
 
-                print "Moving offset: %s, movemnet: %s" % (offset, movement)
+                print "Moving offset: %s, movemnet: %s" % (self.frame_offset, movement)
 
                 if movement == 1:
                     # Don't actually seek to get the next frame since seeking is expensive

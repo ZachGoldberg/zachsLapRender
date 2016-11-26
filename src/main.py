@@ -77,9 +77,13 @@ def build_parser():
                         dest="trackname", type=str,
                         help="Trackname (for overlay)")
 
-    parser.add_argument("-m", "--manual-offset",
-                        dest="manual_offset", action='store_true',
-                        help="Allow the user to manually select the time offset for each video file")
+    parser.add_argument("-m", "--no-manual-offset",
+                        dest="manual_offset", action='store_false',
+                        help="Disable the manual offset calibration feature.  Manual calibration will only happen once per video.")
+
+    parser.add_argument("-fm", "--force-manual-offset",
+                        dest="force_manual_offset", action='store_true',
+                        help="Force display of the manual offset calibration feature. To be used if stored offset is innaccurate.")
 
     parser.add_argument("-y", "--enable-youtube",
                         dest="youtube", action='store_true',
@@ -226,14 +230,15 @@ if __name__ == '__main__':
     if (not args.all_laps and not args.render_sessions) or args.lap_comparison:
         select_laps_to_render(matched_videos, args.lap_comparison)
 
-    if args.manual_offset:
+    if args.manual_offset or args.force_manual_offset:
         for video in matched_videos:
             has_renderable_laps = False
             for lap in video.matched_laps:
                 if lap.get('render'):
                     has_renderable_laps = True
                     break
-            if has_renderable_laps:
+            if has_renderable_laps and (
+                    offsets.get(video.filenames[0]) is None or args.force_manual_offset):
                 offset = video.calibrate_offset()
                 offsets[video.filenames[0]] = offset
                 cfg.offsets = offsets
