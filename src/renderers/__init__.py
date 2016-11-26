@@ -533,6 +533,7 @@ class RenderParams(object):
         self.oldcaps = {}
         self.capstate = {}
         self.render_laps_uniquely = True
+        self.enable_info_panel = True
         self.outputdir = outputdir
         self.videolaps = videolaps
         for video, _ in videolaps:
@@ -600,6 +601,7 @@ class RenderParams(object):
         return int(frames)
 
     def set_bookend_time(self, btime):
+        self.bookend_time = btime
         if self.render_laps_uniquely:
             for lap in self.laps:
                 lap.set_bookend_time(btime)

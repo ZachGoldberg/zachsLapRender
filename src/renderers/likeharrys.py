@@ -124,7 +124,7 @@ class LikeHarrysRenderer(BaseRenderer):
             bottomRight = [(margin + g_meter_right_edge + meter_width),
                            self.from_bottom(110)]
 
-            if len(params.laps) > 1:
+            if len(params.laps) > 1 and params.enable_info_panel:
                 self.render_lapboard(frame, params, lapparams, framenum,
                                      (topLeft[0], topLeft[1] - 90), bottomRight)
             else:

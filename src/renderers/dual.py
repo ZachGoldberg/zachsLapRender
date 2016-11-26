@@ -73,6 +73,10 @@ class DualRenderer(BaseRenderer):
     def _render_video_file(self, out, params, show_video=False):
         lp1 = params.laps[0]
         lp2 = params.laps[1]
+        lp1.set_bookend_time(params.bookend_time)
+        lp2.set_bookend_time(params.bookend_time)
+
+        params.enable_info_panel = False
 
         framenum1 = lp1.start_frame
         framenum2 = lp2.start_frame
