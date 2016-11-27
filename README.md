@@ -17,12 +17,12 @@ Requirements:
 
 
 TODO:
+ - Better filenames / youtube descriptions
  - Fix audio for 2nd half of "split" gopro videos
  - Upload multiple laps to a YT Folder
- - Change color of g-force ball depending on Gs
  - Show filename and lap number in screen
- - Options for MPH vs KPH
  - Show predictive laptime throughout the lap, compared to best of the day
+  -- Can do this by comparing what % through the lap we are at this time (which we've already calculated) to the fastest lap in the dataset.  Can show a % off of optimal?
  - Show splits if they exist
  - Show lap number
  - Account for gap between chapters in gopro videos (~1 second) during rendering.  Gopro is fucking awful

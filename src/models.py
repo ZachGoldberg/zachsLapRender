@@ -363,6 +363,8 @@ class Lap(object):
             if this_fix.lap_time <= seconds and next_fix.lap_time >= seconds:
                 total_delta = next_fix.lap_time - this_fix.lap_time
                 this_delta = seconds - this_fix.lap_time
+                if total_delta == 0:
+                    continue
                 percentage = this_delta / total_delta
                 metric_delta = metric(this_fix) - metric(next_fix)
                 metric_delta_mod = -1 * metric_delta * percentage

@@ -209,7 +209,14 @@ class BaseRenderer(object):
 
         ball_origin = (int(orig_x), int(orig_y))
 
-        ball_color = (255, 255, 100)
+        g_color_threshold = max_g / 4
+        if abs(total_g) > g_color_threshold:
+            g_ratio = abs(total_g - g_color_threshold / (max_g * 0.6))
+            ball_color = (255 - (100 * g_ratio),
+                          255 - (100 * g_ratio),
+                          100 + (255 * g_ratio))
+        else:
+            ball_color = (255, 255, 100)
 
         self.circle(frame, ball_origin, self.g_meter_ball_size,
                           ball_color, -1)
