@@ -193,6 +193,10 @@ def select_laps_to_render(videos, lap_comparison_mode=False,
     for lap in opts:
         laps[lap]['render'] = True
 
+
+def generate_metadata(videofile, params, renderer, args):
+    return renderer.generate_metadata(args, params)
+
 if __name__ == '__main__':
     # Do things with argparse
     if len(sys.argv) > 1:
@@ -280,9 +284,11 @@ if __name__ == '__main__':
                 cfg.offsets = offsets
                 save_config(cfg)
 
-    def upload(lapvideo):
+    def upload(lapvideo, params, renderer, args):
         print "Uploading %s to youtube..." % lapvideo
-        video_id = youtube.upload_video(lapvideo)
+        md = generate_metadata(lapvideo, params, renderer, args)
+
+        video_id = youtube.upload_video(lapvideo, md)
         print "Upload Complete!  Visit at https://www.youtube.com/watch?v=%s" % video_id
 
     if args.lap_comparison:
@@ -293,18 +299,18 @@ if __name__ == '__main__':
         from renderers.dual import DualRenderer
         from renderers.likeharrys import LikeHarrysRenderer
         dr = DualRenderer(dual_vids[0], dual_vids[1], LikeHarrysRenderer)
-        for lapvideo in dr.render_laps(args.outputdir or "/tmp/",
+        for (lapvideo, params) in dr.render_laps(args.outputdir or "/tmp/",
                                     args.show_video,
                                     args.bookend_time,
                                     render_laps_uniquely=False):
             if args.youtube:
-                Thread(target=upload, args=(lapvideo,)).start()
+                Thread(target=upload, args=(lapvideo, params, renderer, args)).start()
     else:
         for video in matched_videos:
             renderer = LikeHarrysRenderer(video)
-            for lapvideo in renderer.render_laps(args.outputdir or "/tmp/",
+            for (lapvideo, params) in renderer.render_laps(args.outputdir or "/tmp/",
                                                  args.show_video,
                                                  args.bookend_time,
                                                  render_laps_uniquely=(not args.render_sessions)):
                 if args.youtube:
-                    Thread(target=upload, args=(lapvideo,)).start()
+                    Thread(target=upload, args=(lapvideo, params, renderer, args)).start()

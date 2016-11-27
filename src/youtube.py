@@ -112,13 +112,13 @@ def get_authenticated_service(args=None):
     http=credentials.authorize(httplib2.Http()))
 
 
-def upload_video(lapvideo):
+def upload_video(lapvideo, (title, description)):
     args = argparse.Namespace()
     args.file = lapvideo
-    args.title = "Zachs Lap Render: %s" % os.path.basename(lapvideo)
+    args.title = title
     args.privacyStatus = "unlisted"
     args.keywords = []
-    args.description = args.title
+    args.description = description
     args.category = 22
     args.auth_host_name = 'localhost'
     args.auth_host_port = [8080, 8090]
