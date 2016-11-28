@@ -304,7 +304,7 @@ if __name__ == '__main__':
                                     args.bookend_time,
                                     render_laps_uniquely=False):
             if args.youtube:
-                Thread(target=upload, args=(lapvideo, params, renderer, args)).start()
+                Thread(target=upload, args=(lapvideo, params, dr, args)).start()
     else:
         for video in matched_videos:
             renderer = LikeHarrysRenderer(video)

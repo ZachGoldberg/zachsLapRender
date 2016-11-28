@@ -40,6 +40,15 @@ class DualRenderer(BaseRenderer):
         self.map_y = 200
         self.map_x = self.map_width
 
+    def generate_title(self, args, params):
+        return "ZLR: Lap# %s (%s) vs. Lap# %s (%s) at %s" % (
+            int(params[0].lapinfo['lap'].lapnum),
+            params[0].lapinfo['lap'].get_time(),
+            int(params[1].lapinfo['lap'].lapnum),
+            params[1].lapinfo['lap'].get_time(),
+            args.trackname)
+
+
     def _get_render_params(self, outputdir):
         lapinfo1 = self.video1.renderable_laps()[0]
         lapinfo2 = self.video2.renderable_laps()[0]
