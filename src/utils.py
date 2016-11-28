@@ -4,7 +4,8 @@ import subprocess
 import tempfile
 import tzlocal
 import wave
-
+import moviepy.editor as mp
+from moviepy.video.io import ffmpeg_tools
 from datetime import datetime
 from dateutil import parser
 
@@ -46,11 +47,13 @@ def within_x_sec(sec, dt1, dt2):
 
 
 
-def merge_audio_and_video(self, videofname, audiofname, outputfile):
+def merge_audio_and_video(videofname, audiofname, outputfile):
     logger.debug("Merging video and audio data...")
-    cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
-        videofname, audiofname, outputfile)
-    subprocess.call(cmd, shell=True)
+    ffmpeg_tools.ffmpeg_merge_video_audio(videofname, audiofname, outputfile)
+
+    #cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
+    #    videofname, audiofname, outputfile)
+    #subprocess.call(cmd, shell=True)
 
 
 def collect_videos(dirname, laps=None):
@@ -120,9 +123,13 @@ def combine_audio(sources, outfile):
 def extract_audio(source, newaudiofile, start_time, duration):
     tmpaudiofile = "%s.wav" % tempfile.NamedTemporaryFile().name
 
-    subprocess.call(
-        "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (source, tmpaudiofile),
-        shell=True)
+
+    clip = mp.VideoFileClip(source)
+    clip.audio.write_audiofile(tmpaudiofile)
+
+    #subprocess.call(
+    #    "ffmpeg -y -i %s -ab 160k -ac 2 -ar 44100 -vn %s" % (source, tmpaudiofile),
+    #    shell=True)
 
     old_audio = wave.open(tmpaudiofile, 'rb')
     new_audio = wave.open(newaudiofile, 'wb')
