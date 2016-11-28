@@ -2,13 +2,12 @@ import cv2
 import logging
 import math
 import os
-import subprocess
 import tempfile
 import time
 from threading import Thread
 
 from contextlib import contextmanager
-from utils import extract_audio, combine_audio, mix_audiofiles
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -448,21 +447,15 @@ class BaseRenderer(object):
         for lap in params.laps:
             outfile = tempfile.NamedTemporaryFile().name
             tempfiles.append(outfile)
-            extract_audio(lap.video.filenames[0],
-                          outfile,
-                          lap.start_time,
-                          lap.duration)
+            utils.extract_audio(lap.video.filenames[0],
+                                outfile,
+                                lap.start_time,
+                                lap.duration)
 
-        combine_audio(tempfiles, newaudiofile)
+        utils.combine_audio(tempfiles, newaudiofile)
 
         for temp in tempfiles:
             os.unlink(temp)
-
-    def _merge_audio_and_video(self, videofname, audiofname, outputfile):
-        logger.debug("Merging video and audio data...")
-        cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
-            videofname, audiofname, outputfile)
-        subprocess.call(cmd, shell=True)
 
     def _get_render_params(self, outputdir):
         laptuples = []
@@ -505,7 +498,7 @@ class BaseRenderer(object):
             newaudiofile = "/tmp/zachaudioout.wav"
             self._render_audio_file(params, newaudiofile)
 
-            self._merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
+            utils.merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
 
             logger.debug("Finished with %s" % params.final_newfname)
 

@@ -45,6 +45,14 @@ def within_x_sec(sec, dt1, dt2):
     return abs((dt1 - dt2).total_seconds()) < sec
 
 
+
+def merge_audio_and_video(self, videofname, audiofname, outputfile):
+    logger.debug("Merging video and audio data...")
+    cmd = "ffmpeg -y -i %s -i %s -c:v copy -c:a aac -strict experimental %s" % (
+        videofname, audiofname, outputfile)
+    subprocess.call(cmd, shell=True)
+
+
 def collect_videos(dirname, laps=None):
     if not laps:
         laps = []

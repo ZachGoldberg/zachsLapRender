@@ -4,7 +4,6 @@ import logging
 import math
 import numpy as np
 import os
-import subprocess
 import time
 
 from threading import Thread
