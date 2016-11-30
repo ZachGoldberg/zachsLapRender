@@ -432,16 +432,18 @@ class BaseRenderer(object):
                     last_time = time.time()
 
                     infile = os.path.basename(params.get_video_for_frame(lapparams, framenum))
-                    sys.stdout.write("\b" * last_written_chars)
-                    msg = "From %s lap %s, Written %s/%s frames %.2f%% %s fps..." % (
-                        infile,
-                        int(lapparams.lapinfo['lap'].lapnum),
-                        frames_writen,
-                        params.total_frames(),
-                        100 * float(frames_writen) / params.total_frames(),
-                        (30 / delta))
-                    sys.stdout.write(msg)
-                    last_written_chars = len(msg)
+
+                    if logger.getEffectiveLevel() <= logging.INFO:
+                        sys.stdout.write("\b" * last_written_chars)
+                        msg = "From %s lap %s, Written %s/%s frames %.2f%% %s fps..." % (
+                            infile,
+                            int(lapparams.lapinfo['lap'].lapnum),
+                            frames_writen,
+                            params.total_frames(),
+                            100 * float(frames_writen) / params.total_frames(),
+                            (30 / delta))
+                        sys.stdout.write(msg)
+                        last_written_chars = len(msg)
 
         logger.debug("Buttoning up video...")
         cv2.destroyAllWindows()
