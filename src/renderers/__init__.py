@@ -495,10 +495,13 @@ class BaseRenderer(object):
             self._render_video_file(out, params, show_video=show_video)
             out.release()
 
-            newaudiofile = "/tmp/zachaudioout.wav"
+            newaudiofile = tempfile.NamedTemporaryFile().name
             self._render_audio_file(params, newaudiofile)
 
             utils.merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
+
+            os.unlink(newaudiofile)
+            os.unlink(params.newfname)
 
             logger.debug("Finished with %s" % params.final_newfname)
 
