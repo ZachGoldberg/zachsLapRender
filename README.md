@@ -18,8 +18,6 @@ Requirements:
 
 TODO:
  - Ability to compare laps between days (two different csv files)
- - Clear temp files after use
-- Better filenames / youtube descriptions
  - Fix audio for 2nd half of "split" gopro videos
  - Upload multiple laps to a YT Folder
  - Show filename and lap number in screen
