@@ -17,12 +17,10 @@ Requirements:
 
 
 TODO:
- - Store dirs/config from last run and use as defaults in future
- - Look at multiple lap files
+ - Use config cache for Gooey
  - Cache scanning of video files to make scanning big repos easier
- - Ability to compare laps between days (two different csv files)
  - Fix audio for 2nd half of "split" gopro videos
- - Upload multiple laps to a YT Folder
+ - Upload multiple laps to a YT Playlist
  - Show filename and lap number in screen
  - Show predictive laptime throughout the lap, compared to best of the day
   -- Can do this by comparing what % through the lap we are at this time (which we've already calculated) to the fastest lap in the dataset.  Can show a % off of optimal?

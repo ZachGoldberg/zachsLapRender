@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 sys.stdout = nonbuffered_stdout
 
+# Args we want to cache between invocations
+SAVEABLE_ARGS = ["datafile", "datafile_dir", "videodir",
+                "recursive", "outputdir", "trackname",
+                "bookend_time"]
+
 def load_config():
     path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
     if not os.path.exists(path):
@@ -67,7 +72,7 @@ def build_parser():
 
     parser.add_argument('--recursive', dest='recursive',
                         action='store_true',
-                        help='Search for videos / datafiles recursively')
+                        help='Search for videos recursively')
 
     parser.add_argument("-v", '--verbose', dest='info_verbose',
                         action='store_true',
@@ -118,7 +123,6 @@ def build_parser():
                         dest="bookend_time", type=int,
                         default=8,
                         help="Number of seconds to render before and after a lap (default: 8)")
-
 
     return parser
 
@@ -214,6 +218,24 @@ def get_laps(filename):
     logger.info("Found %s laps" % len(laps))
     return laps
 
+def update_cfg(cfg, args):
+    arg_cfg = {}
+    try:
+        arg_cfg = cfg.args
+    except:
+        pass
+
+    for arg in SAVEABLE_ARGS:
+        new_val = getattr(args, arg)
+        old_val = arg_cfg.get(arg)
+        if new_val:
+            arg_cfg[arg] = new_val
+        elif old_val:
+            setattr(args, arg, old_val)
+
+    cfg.args = arg_cfg
+    save_config(cfg)
+    return cfg, args
 
 if __name__ == '__main__':
     # Do things with argparse
@@ -221,6 +243,9 @@ if __name__ == '__main__':
         args = build_parser().parse_args()
     else:
         args = build_parser_gui().parse_args()
+
+    cfg = load_config()
+    cfg, args = update_cfg(cfg, args)
 
     if args.info_verbose:
         logging.getLogger().setLevel(logging.INFO)
@@ -266,16 +291,14 @@ if __name__ == '__main__':
         if video.matched_laps:
             matched_videos.append(video)
 
-    cfg = load_config()
     try:
         offsets = cfg.offsets
     except:
         offsets = {}
+        cfg.offsets = {}
 
     for video in matched_videos:
         video.frame_offset = offsets.get(video.filenames[0], 0) or 0
-
-
 
     if not matched_videos:
         print "No matching video/laps"
