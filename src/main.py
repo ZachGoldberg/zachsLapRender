@@ -55,10 +55,19 @@ def build_parser():
                         widget="FileChooser",
                         help='Input structured data telemetry file')
 
+    parser.add_argument('--input-data-file-directory', dest='datafile_dir',
+                        type=str,
+                        widget="DirChooser",
+                        help='Folder containing Input structured data telemetry file')
+
     parser.add_argument('-vd', '--video-directory', dest='videodir',
                         type=str,
                         widget="DirChooser",
                         help='Folder containing videos with timestamps synced to telemetry')
+
+    parser.add_argument('--recursive', dest='recursive',
+                        action='store_true',
+                        help='Search for videos / datafiles recursively')
 
     parser.add_argument("-v", '--verbose', dest='info_verbose',
                         action='store_true',
@@ -197,6 +206,15 @@ def select_laps_to_render(videos, lap_comparison_mode=False,
 def generate_metadata(videofile, params, renderer, args):
     return renderer.generate_metadata(args, params)
 
+
+def get_laps(filename):
+    parserClass = parsers.find_parser(filename)
+    logger.info("Parsing telemetry from %s with %s" % (filename, parserClass))
+    laps = parserClass.parse_data(open(filename))
+    logger.info("Found %s laps" % len(laps))
+    return laps
+
+
 if __name__ == '__main__':
     # Do things with argparse
     if len(sys.argv) > 1:
@@ -210,13 +228,15 @@ if __name__ == '__main__':
     if args.debug_verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    laps = None
+    laps = []
     if args.datafile:
         filename = args.datafile.name
-        parserClass = parsers.find_parser(filename)
-        logger.info("Parsing telemetry with %s" % parserClass)
-        laps = parserClass.parse_data(args.datafile)
-        logger.info("Found %s laps" % len(laps))
+        laps = get_laps(filename)
+
+    if args.datafile_dir:
+        files = os.listdir(args.datafile_dir)
+        for datafile in files:
+            laps.extend(get_laps(os.path.join(args.datafile_dir, datafile)))
 
     if args.analyze_data:
         print_lap_stats(laps)

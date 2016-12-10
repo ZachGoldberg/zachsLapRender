@@ -17,6 +17,9 @@ Requirements:
 
 
 TODO:
+ - Store dirs/config from last run and use as defaults in future
+ - Look at multiple lap files
+ - Cache scanning of video files to make scanning big repos easier
  - Ability to compare laps between days (two different csv files)
  - Fix audio for 2nd half of "split" gopro videos
  - Upload multiple laps to a YT Folder
