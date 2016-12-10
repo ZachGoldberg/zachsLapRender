@@ -1,5 +1,7 @@
+import config
 import cv2
 import logging
+import json
 import math
 import os
 import pytz
@@ -23,9 +25,11 @@ from renderers.likeharrys import LikeHarrysRenderer
 
 logger = logging.getLogger(__name__)
 
-speed_func = lambda x: x.speed_mph
 
 class Video(object):
+    datetimes = ['created_at', 'last_modified_at',
+                 'last_access_at', 'file_start_date']
+
     def __init__(self, filename):
         self.filenames = [filename]
         self.filebase = os.path.basename(filename[0])
@@ -42,8 +46,8 @@ class Video(object):
         self.duration = None
         self.matched_laps = []
         self.frame_offset = 0
-        self._calc_times()
         self.trackname = ""
+        self._calc_times()
 
     def filename_number(self, framenum):
         index = 0
@@ -80,14 +84,30 @@ class Video(object):
 
         return None, None
 
-
-
     def _calc_times(self):
         # Open the file, find timestmps etc.
         res = os.stat(self.filenames[0])
         self.last_modified_at = datetime.fromtimestamp(res.st_mtime)
         self.last_access_at = datetime.fromtimestamp(res.st_atime)
         self.created_at =  datetime.fromtimestamp(res.st_ctime)
+
+        # Check the cache and see if we've analyzed this video before
+        # If we have and last_modified_at is the same
+        # then restore old config and skip actual (slow) calculations
+        cfg = utils.load_config()
+        cfg_key = ",".join(self.filenames)
+        video_cache = {}
+        old_cfg = {}
+        try:
+            video_cache = cfg.video_cache
+            old_cfg = json.loads(video_cache.get(cfg_key, {}))
+        except:
+            pass
+
+        if old_cfg.get("last_modified_at") == self.last_modified_at.strftime("%s.%f"):
+            logger.debug("Using cached video config data")
+            self.from_dict(old_cfg)
+            return
 
         # Don't bother with obviously not video files
         _, ext = os.path.splitext(self.filenames[0])
@@ -119,6 +139,32 @@ class Video(object):
 
         self.file_start_date = creation_time(self.filenames[0])
         self.is_valid_video = True
+
+        video_cache[cfg_key] = json.dumps(self.to_dict())
+        cfg.video_cache = video_cache
+        utils.save_config(cfg)
+
+    def to_dict(self):
+        data = self.__dict__.copy()
+        del data['matched_laps']
+        for dt in self.datetimes:
+            data[dt] = getattr(self, dt).strftime("%s.%f")
+
+        data["duration"] = self.duration.total_seconds()
+
+        return data
+
+    def from_dict(self, data):
+        for k, v in data.iteritems():
+            if k not in self.datetimes:
+                if isinstance(v, config.Sequence):
+                    v = v.data
+                setattr(self, k, v)
+            else:
+                val = datetime.fromtimestamp(float(v), tzlocal.get_localzone())
+                setattr(self, k, val)
+
+        self.duration = timedelta(seconds=float(data['duration']))
 
     def renderable_laps(self):
         return [m for m in self.matched_laps if m['render']]

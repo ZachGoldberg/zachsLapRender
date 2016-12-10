@@ -1,3 +1,4 @@
+import config
 import logging
 import os
 import subprocess
@@ -13,6 +14,8 @@ from math import radians, cos, sin, asin, sqrt
 from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
+
+CONFIG = None
 
 def creation_time(filename):
     """
@@ -171,3 +174,20 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * asin(sqrt(a))
     km = 6367 * c
     return km
+
+
+def load_config():
+    global CONFIG
+
+    if CONFIG:
+        return CONFIG
+
+    path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
+    if not os.path.exists(path):
+        open(path, 'w').close()
+    CONFIG = config.Config(file(path))
+    return CONFIG
+
+def save_config(cfg):
+    path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
+    cfg.save(open(path, 'w'))

@@ -1,5 +1,4 @@
 import argparse
-import config
 import logging
 import parsers
 import os
@@ -10,7 +9,7 @@ from threading import Thread
 
 from models import Fix, Lap, Session, Day
 from renderers import LikeHarrysRenderer
-from utils import collect_videos
+from utils import collect_videos, load_config, save_config
 import youtube
 
 import argparse
@@ -28,16 +27,6 @@ sys.stdout = nonbuffered_stdout
 SAVEABLE_ARGS = ["datafile", "datafile_dir", "videodir",
                 "recursive", "outputdir", "trackname",
                 "bookend_time"]
-
-def load_config():
-    path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
-    if not os.path.exists(path):
-        open(path, 'w').close()
-    return config.Config(file(path))
-
-def save_config(cfg):
-    path = os.path.join(os.path.expanduser("~"), ".zachslaprenderer.cfg")
-    cfg.save(open(path, 'w'))
 
 @Gooey
 def build_parser_gui():
