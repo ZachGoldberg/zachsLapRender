@@ -5,7 +5,13 @@ import subprocess
 import tempfile
 import tzlocal
 import wave
-import moviepy.editor as mp
+try:
+    import moviepy.editor as mp
+except:
+    import traceback
+    traceback.print_exc()
+    import imageio
+    imageio.plugins.ffmpeg.download()
 from moviepy.video.io import ffmpeg_tools
 from datetime import datetime
 from dateutil import parser

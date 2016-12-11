@@ -4,3 +4,4 @@ pytz
 tzlocal
 google-api-python-client
 pydub
+moviepy
