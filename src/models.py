@@ -541,7 +541,7 @@ class Lap(object):
         datestr = "%s %s %s" % (fix.date, start_time, utc)
         self.start_time = parser.parse(datestr)
         self.end_time = parser.parse("%s %s %s" % (fix.date, end_time, utc))
-
+        #import pdb; pdb.set_trace()
         if utc:
             self.start_time = self.start_time.astimezone(tzlocal.get_localzone())
             self.end_time = self.end_time.astimezone(tzlocal.get_localzone())

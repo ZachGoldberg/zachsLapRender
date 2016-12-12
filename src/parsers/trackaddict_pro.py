@@ -53,10 +53,6 @@ class TrackAddictCSVParser(LaptimeParser):
         lap_ended = False
         last_fix = None
         for row in reader:
-            #if lap_ended:
-            #    last_lap_end = float(row['Time'])
-            #    lap_ended = False
-
             if "End" in row['Time']:
                 continue
 
@@ -84,7 +80,6 @@ class TrackAddictCSVParser(LaptimeParser):
                 # Now insert the "lap ending" fix into the end of the last lap
                 lapEndFix = raw_laps[last_fix.lap_index][-1].copy()
                 lapEndFix.lap_time = laptime_s
-                #lapEndFix.wall_time = last_lap_end
                 raw_laps[ending_lap].append(lapEndFix)
                 continue
 

@@ -246,13 +246,12 @@ if __name__ == '__main__':
     laps = []
     if args.datafile:
         filename = args.datafile
-        filename = "Log-20161120-101406 Big Willow - 1.48.516.csv"
         laps = get_laps(filename)
 
-    #if args.datafile_dir:
-    #    files = os.listdir(args.datafile_dir)
-    #    for datafile in files:
-    #        laps.extend(get_laps(os.path.join(args.datafile_dir, datafile)))
+    if args.datafile_dir:
+        files = os.listdir(args.datafile_dir)
+        for datafile in files:
+            laps.extend(get_laps(os.path.join(args.datafile_dir, datafile)))
 
     if args.analyze_data:
         print_lap_stats(laps)
