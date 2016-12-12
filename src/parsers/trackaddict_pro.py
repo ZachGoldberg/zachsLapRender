@@ -85,7 +85,7 @@ class TrackAddictCSVParser(LaptimeParser):
                 raw_laps[ending_lap].append(lapEndFix)
                 continue
 
-            fix = Fix(is_utc=True)
+            fix = Fix(is_utc=False)
             for k, v in row.iteritems():
                 if k in cls.COL_MAPPING:
                     fix.setattr(cls.COL_MAPPING[k], v)
