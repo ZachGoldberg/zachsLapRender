@@ -51,13 +51,41 @@ class TrackAddictCSVParser(LaptimeParser):
         fix_id = 0
         last_lap_end = 0
         lap_ended = False
+        last_fix = None
         for row in reader:
-            if lap_ended:
-                last_lap_end = float(row['Time'])
-                lap_ended = False
+            #if lap_ended:
+            #    last_lap_end = float(row['Time'])
+            #    lap_ended = False
+
+            if "End" in row['Time']:
+                continue
 
             if "#" in row['Time']:
-                lap_ended = True
+                # We need to insert a new fix with the exact lap end time,
+                # then modify all fixes after that time to actually be for the next lap
+
+                laptime = row['Time'][9:].split(':')
+                laptime_s = int(laptime[0]) * 3600 + int(laptime[1]) * 60 + float(laptime[2])
+                last_lap_end += laptime_s
+                ending_lap = last_fix.lap_index
+                # Bump all fixes from last lap after laptime_s to next lap
+                fixes = list(raw_laps[last_fix.lap_index])
+                for fix in fixes:
+                    if float(fix.lap_time) > laptime_s:
+                        raw_laps[fix.lap_index].remove(fix)
+
+                        fix.lap_index += 1
+                        if not fix.lap_index in raw_laps:
+                            raw_laps[fix.lap_index] = []
+
+                        fix.lap_time -= last_lap_end
+                        raw_laps[fix.lap_index].insert(0, fix)
+
+                # Now insert the "lap ending" fix into the end of the last lap
+                lapEndFix = raw_laps[last_fix.lap_index][-1].copy()
+                lapEndFix.lap_time = laptime_s
+                #lapEndFix.wall_time = last_lap_end
+                raw_laps[ending_lap].append(lapEndFix)
                 continue
 
             fix = Fix(is_utc=True)
@@ -66,14 +94,15 @@ class TrackAddictCSVParser(LaptimeParser):
                     fix.setattr(cls.COL_MAPPING[k], v)
 
             fix.fix_id = fix_id
-            fix.lap_time -= last_lap_end
             fix_id += 1
             fix.date = str(file_date.date())
             fix.wall_time = str((file_date + timedelta(seconds=fix.lap_time)).time())
+            fix.lap_time -= last_lap_end
             fixes.append(fix)
             lap_fixes = raw_laps.get(fix.lap_index, [])
             lap_fixes.append(fix)
             raw_laps[fix.lap_index] = lap_fixes
+            last_fix = fix
 
         laps = []
         for lapnum, fixes in raw_laps.iteritems():

@@ -625,3 +625,15 @@ class Fix(object):
                                              self.lap_time,
                                              self.lat,
                                              self.long)
+
+    def copy(self):
+        newfix = Fix()
+        for attr in self.ATTRS:
+            try:
+                setattr(newfix, attr, getattr(self, attr))
+            except:
+                pass
+
+        newfix.wall_time = self.wall_time
+        newfix.fix_id = "%s b" % newfix.fix_id
+        return newfix
