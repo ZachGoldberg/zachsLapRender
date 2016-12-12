@@ -45,11 +45,12 @@ class HarrysCSVParser(LaptimeParser):
 
     @classmethod
     def is_valid(cls, filename):
-        if ".csv" in filename:
-            return True
+        df = open(filename)
+        start = df.readline()
+        return "Harry's GPS LapTimer" in start
 
     @classmethod
-    def parse_data(cls, datafile):
+    def parse_data(cls, datafile, filename=None):
         """head -n 3 sample.csv
         Harry's GPS LapTimer
 INDEX,LAPINDEX,DATE,TIME,TIME_LAP,LATITUDE,LONGITUDE,SPEED_KPH,SPEED_MPH,HEIGHT_M,HEIGHT_FT,HEADING_DEG,GPSDIFFERENTIAL[UNKNOWN/2D3D/DGPS/INVALID],GPSFIX[NOFIX/2D/3D/UNKNOWN],SATELLITES,HDOP,ACCURACY_M,DISTANCE_KM,DISTANCE_MILE,ACCELERATIONSOURCE[CALCULATED/MEASURED/UNDEFINED],LATERALG,LINEALG,LEAN,RPM,MAF,WHEEL_SPEED_KPH,WHEEL_SPEED_MPH,THROTTLE,GEAR,FUEL,COOLANT_CELSIUS,OIL_CELSIUS,IAT_CELSIUS,MAP

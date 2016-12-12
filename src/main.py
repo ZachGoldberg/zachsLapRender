@@ -24,7 +24,7 @@ nonbuffered_stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 sys.stdout = nonbuffered_stdout
 
 # Args we want to cache between invocations
-SAVEABLE_ARGS = ["datafile", "datafile_dir", "videodir",
+SAVEABLE_ARGS = ["datafile_dir", "videodir",
                 "recursive", "outputdir", "trackname",
                 "bookend_time"]
 
@@ -45,7 +45,7 @@ def build_parser():
         help='Analyze and print info about videos found in video-directory, does not render video')
 
     parser.add_argument('--input-data-file', dest='datafile',
-                        type=argparse.FileType('r'),
+                        type=str,
                         widget="FileChooser",
                         help='Input structured data telemetry file')
 
@@ -202,8 +202,9 @@ def generate_metadata(videofile, params, renderer, args):
 
 def get_laps(filename):
     parserClass = parsers.find_parser(filename)
+
     logger.info("Parsing telemetry from %s with %s" % (filename, parserClass))
-    laps = parserClass.parse_data(open(filename))
+    laps = parserClass.parse_data(open(filename), filename=filename)
     logger.info("Found %s laps" % len(laps))
     return laps
 
@@ -297,7 +298,6 @@ if __name__ == '__main__':
     # that way we can be finished with all user input and just run
     if args.youtube:
         youtube.get_authenticated_service()
-
 
     if not args.all_laps or args.lap_comparison:
         select_laps_to_render(matched_videos, args.lap_comparison, args.render_sessions)

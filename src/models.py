@@ -538,7 +538,8 @@ class Lap(object):
 
         self.total_distance = total_distance
         self.lap_time = max_time
-        self.start_time = parser.parse("%s %s %s" % (fix.date, start_time, utc))
+        datestr = "%s %s %s" % (fix.date, start_time, utc)
+        self.start_time = parser.parse(datestr)
         self.end_time = parser.parse("%s %s %s" % (fix.date, end_time, utc))
 
         if utc:

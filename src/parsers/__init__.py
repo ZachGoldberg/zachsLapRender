@@ -11,8 +11,9 @@ class LaptimeParser(object):
 
 
 from harrys_csv import HarrysCSVParser
+from trackaddict_pro import TrackAddictCSVParser
 
-parsers = [HarrysCSVParser]
+parsers = [HarrysCSVParser, TrackAddictCSVParser]
 
 def find_parser(filename):
     for parser in parsers:
