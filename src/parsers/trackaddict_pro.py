@@ -1,4 +1,5 @@
 import csv
+import os
 from datetime import datetime, timedelta
 from StringIO import StringIO
 from . import LaptimeParser
@@ -41,7 +42,8 @@ class TrackAddictCSVParser(LaptimeParser):
         """
 
         # Start date is embedded in the filename only
-        file_date = datetime.strptime(filename[4:19], "%Y%m%d-%H%M%S")
+        base = os.path.basename(filename)
+        file_date = datetime.strptime(base[4:19], "%Y%m%d-%H%M%S")
 
         # Fast forward past the TrackAddict notice
         data = StringIO("\n".join(datafile.read().split("\n")[2:]))
