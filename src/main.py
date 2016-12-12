@@ -45,17 +45,19 @@ def build_parser():
         help='Analyze and print info about videos found in video-directory, does not render video')
 
     parser.add_argument('--input-data-file', dest='datafile',
-                        type=str,
+                        nargs='+',
                         widget="FileChooser",
                         help='Input structured data telemetry file')
 
     parser.add_argument('--input-data-file-directory', dest='datafile_dir',
                         type=str,
+                        nargs='+',
                         widget="DirChooser",
                         help='Folder containing Input structured data telemetry file')
 
     parser.add_argument('-vd', '--video-directory', dest='videodir',
                         type=str,
+                        nargs='+',
                         widget="DirChooser",
                         help='Folder containing videos with timestamps synced to telemetry')
 
@@ -245,11 +247,12 @@ if __name__ == '__main__':
 
     laps = []
     if args.datafile:
-        filename = args.datafile
-        laps = get_laps(filename)
+        datafile = ' '.join(args.datafile)
+        laps = get_laps(datafile)
 
     if args.datafile_dir:
-        files = os.listdir(args.datafile_dir)
+        datafile_dir = ' '.join(args.datafile_dir)
+        files = os.listdir(datafile_dir)
         for datafile in files:
             laps.extend(get_laps(os.path.join(args.datafile_dir, datafile)))
 
@@ -257,7 +260,9 @@ if __name__ == '__main__':
         print_lap_stats(laps)
         sys.exit(0)
 
-    videos = collect_videos(args.videodir, laps)
+    if args.videodir:
+        videodir = ' '.join(args.videodir)
+        videos = collect_videos(videodir, laps)
 
     if args.trackname:
         for video in videos:
