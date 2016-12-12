@@ -470,9 +470,11 @@ class Lap(object):
         min_time = 999999
         utc = ""
         total_distance = 0
-        if self.fixes and self.fixes[0].is_utc:
-            utc = " UTC"
-
+        is_utc = self.fixes[0].is_utc
+        if self.fixes and is_utc:
+            tzname = " UTC"
+        else:
+            tzname = tzlocal.get_localzone()._tzname
 
         # Peek speed / gforce variables
         peek_state = {}
@@ -538,13 +540,16 @@ class Lap(object):
 
         self.total_distance = total_distance
         self.lap_time = max_time
-        datestr = "%s %s %s" % (fix.date, start_time, utc)
+        datestr = "%s %s %s" % (fix.date, start_time, tzname)
         self.start_time = parser.parse(datestr)
-        self.end_time = parser.parse("%s %s %s" % (fix.date, end_time, utc))
-        #import pdb; pdb.set_trace()
-        if utc:
+        self.end_time = parser.parse("%s %s %s" % (fix.date, end_time, tzname))
+        if is_utc:
             self.start_time = self.start_time.astimezone(tzlocal.get_localzone())
             self.end_time = self.end_time.astimezone(tzlocal.get_localzone())
+        else:
+            lz = tzlocal.get_localzone()
+            self.start_time = lz.localize(self.start_time)
+            self.end_time = lz.localize(self.end_time)
 
 
     def details(self):

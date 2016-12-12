@@ -17,8 +17,8 @@ class TrackAddictCSVParser(LaptimeParser):
         "Speed (MPH)": "speed_mph",
         "Heading": "heading_deg",
         "Accuracy (m)": "accuracy",
-        "Accel X": "lat_g",
-        "Accel Y": "lin_g",
+        "Accel X": "lin_g",
+        "Accel Y": "lat_g",
         #"Accel Z": "accel_z"
     }
 
@@ -92,6 +92,8 @@ class TrackAddictCSVParser(LaptimeParser):
 
             fix.fix_id = fix_id
             fix_id += 1
+            fix.lat_g = float(fix.lat_g) * -1
+            fix.lin_g = float(fix.lin_g) * -1
             fix.date = str(file_date.date())
             fix.wall_time = str((file_date + timedelta(seconds=fix.lap_time)).time())
             fix.lap_time -= last_lap_end
