@@ -35,8 +35,8 @@ def creation_time(filename):
     t = out.splitlines()
 
     # TODO ZG: This feels remarkably fragile...
-    time = str(t[14][18:37])
     try:
+        time = str(t[14][18:37])
         lz =  tzlocal.get_localzone()
         parsed = lz.localize(parser.parse(time))
         return parsed
@@ -131,7 +131,6 @@ def combine_audio(sources, outfile):
 
 def extract_audio(source, newaudiofile, start_time, duration):
     tmpaudiofile = "%s.wav" % tempfile.NamedTemporaryFile().name
-
 
     clip = mp.VideoFileClip(source)
     clip.audio.write_audiofile(tmpaudiofile)

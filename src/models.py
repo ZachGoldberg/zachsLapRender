@@ -148,7 +148,8 @@ class Video(object):
         data = self.__dict__.copy()
         del data['matched_laps']
         for dt in self.datetimes:
-            data[dt] = getattr(self, dt).strftime("%s.%f")
+            if getattr(self, dt):
+              data[dt] = getattr(self, dt).strftime("%s.%f")
 
         data["duration"] = self.duration.total_seconds()
 

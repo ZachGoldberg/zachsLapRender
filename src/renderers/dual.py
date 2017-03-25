@@ -71,7 +71,6 @@ class DualRenderer(BaseRenderer):
         newaudiofile2 = "/tmp/zachaudioout2.wav"
         extract_audio(self.video2.filenames[0], newaudiofile2, lp2.start_time, lp2.duration)
 
-        newaudiofile = "/tmp/zachaudioout.wav"
         if lp1.duration > lp2.duration:
             mix_audiofiles(newaudiofile1, newaudiofile2, newaudiofile)
         else:

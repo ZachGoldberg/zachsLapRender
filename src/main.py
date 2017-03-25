@@ -221,9 +221,9 @@ def update_cfg(cfg, args):
         new_val = getattr(args, arg)
         old_val = arg_cfg.get(arg)
         if new_val:
-            arg_cfg[arg] = new_val
+            arg_cfg[str(arg)] = new_val
         elif old_val:
-            setattr(args, arg, old_val)
+            setattr(args, str(arg), old_val)
 
     cfg.args = arg_cfg
     save_config(cfg)
@@ -254,7 +254,7 @@ if __name__ == '__main__':
         datafile_dir = ' '.join(args.datafile_dir)
         files = os.listdir(datafile_dir)
         for datafile in files:
-            laps.extend(get_laps(os.path.join(args.datafile_dir, datafile)))
+            laps.extend(get_laps(os.path.join(datafile_dir, datafile)))
 
     if args.analyze_data:
         print_lap_stats(laps)
@@ -317,7 +317,7 @@ if __name__ == '__main__':
             if has_renderable_laps and (
                     offsets.get(video.filenames[0]) is None or args.force_manual_offset):
                 offset = video.calibrate_offset()
-                offsets[video.filenames[0]] = offset
+                offsets[str(video.filenames[0])] = offset
                 cfg.offsets = offsets
                 save_config(cfg)
 
