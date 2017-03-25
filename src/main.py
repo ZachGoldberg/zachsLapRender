@@ -82,8 +82,6 @@ def build_parser():
                         dest="trackname", type=str,
                         help="Trackname (for overlay)")
 
-
-
     parser.add_argument("-m", "--no-manual-offset",
                         dest="manual_offset", action='store_false',
                         help="Disable the manual offset calibration feature.  Manual calibration will only happen once per video.")

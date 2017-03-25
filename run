@@ -41,7 +41,7 @@ run_python() {
 }
 
 run_zachs() {
-    python src/main.py $@
+    python src/main.py "$@"
 }
 
 run_test_harrys_csv_parser() {
@@ -70,14 +70,14 @@ run_test_real_video2() {
 }
 
 run_post_session() {
-    if [ -z $1 ]; then
+    if [ -z "$1" ]; then
         echo "Usage: $0 $1 <trackname> [videodirectory] [inputdatafile]"
         exit 1
     fi
 
-    track=$1
-    videodir=$2
-    datafile=$3
+    track="$1"
+    videodir="$2"
+    datafile="$3"
 
     if [ -z $videodir ]; then
         videodir=~/Videos/RacingVideos/`ls ~/Videos/RacingVideos/ --sort=time --group-directories-first | head -n1`
