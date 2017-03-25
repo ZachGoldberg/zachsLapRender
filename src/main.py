@@ -328,7 +328,6 @@ if __name__ == '__main__':
         youtube.get_authenticated_service()
 
     if not args.all_laps or args.lap_comparison:
-        import pdb; pdb.set_trace()
         if args.fastest_lap:
             select_fastest_lap(matched_videos, args.fastest_lap)
         else:

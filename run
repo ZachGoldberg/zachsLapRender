@@ -78,6 +78,7 @@ run_post_session() {
     track="$1"
     videodir="$2"
     datafile="$3"
+    shift; shift; shift;
 
     if [ -z $videodir ]; then
         videodir=~/Videos/RacingVideos/`ls ~/Videos/RacingVideos/ --sort=time --group-directories-first | head -n1`

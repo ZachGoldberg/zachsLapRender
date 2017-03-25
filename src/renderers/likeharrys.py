@@ -75,11 +75,16 @@ class LikeHarrysRenderer(BaseRenderer):
         lapdate = (lap.start_time + timedelta(seconds=seconds_total_in)).strftime(
             "%b %d, %Y %I:%M %p")
         trackname = self.video.trackname
-        self.text(frame, lapdate, (margin * 2, self.from_bottom(75 + self.g_meter_size + margin)),
+        if len(params.laps) > 1 and params.enable_info_panel:
+            info_boost = 20
+        else:
+            info_boost = 0
+
+        self.text(frame, lapdate, (margin * 2, self.from_bottom(info_boost + 75 + self.g_meter_size + margin)),
                   cv2.FONT_HERSHEY_PLAIN, 1.5,
                   (255, 255, 255), 1, cv2.CV_AA)
 
-        self.text(frame, trackname, (margin * 2, self.from_bottom(45 + self.g_meter_size + margin)),
+        self.text(frame, trackname, (margin * 2, self.from_bottom(info_boost + 49 + self.g_meter_size + margin)),
                   cv2.FONT_HERSHEY_PLAIN, 1.5,
                   (255, 255, 255), 1, cv2.CV_AA)
 
