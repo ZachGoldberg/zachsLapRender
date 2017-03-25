@@ -77,7 +77,7 @@ def collect_videos(dirname, laps=None):
 
     videos = []
     for fname in files:
-        logger.info("Inspecting %s..." % fname)
+        logger.debug("Inspecting %s..." % fname)
 
         from models import Video
 

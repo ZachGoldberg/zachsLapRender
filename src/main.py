@@ -82,6 +82,8 @@ def build_parser():
                         dest="trackname", type=str,
                         help="Trackname (for overlay)")
 
+
+
     parser.add_argument("-m", "--no-manual-offset",
                         dest="manual_offset", action='store_false',
                         help="Disable the manual offset calibration feature.  Manual calibration will only happen once per video.")
@@ -114,6 +116,16 @@ def build_parser():
                         dest="bookend_time", type=int,
                         default=8,
                         help="Number of seconds to render before and after a lap (default: 8)")
+
+    parser.add_argument("-fl", "--fastest_lap",
+                        dest="fastest_lap", type=int,
+                        default=None,
+                        help="(base 1) decide which lap to render based on its relative order, 1 = fastest lap, 2 = second fastest lap etc.")
+
+    parser.add_argument("-cl", "--comparison_lap",
+                        dest="comparison_laps", type=str,
+                        default="1,2",
+                        help="Which laps to compare, e.g. 1,2 or 1,3 would compare the fastest and second fastest laps, or fastest and third fastest laps")
 
     return parser
 
@@ -162,6 +174,19 @@ def select_sessions_to_render(videos):
         for lap in video.matched_laps:
             lap['render'] = True
 
+
+def select_fastest_lap(videos, fastest_lapnum):
+    laps = {}
+    for video in videos:
+        for lap in video.matched_laps:
+            key = str(lap['lap'].lap_time)
+            laps[key] = lap
+
+    keys = laps.keys()
+    keys.sort()
+    lap =  laps[keys[fastest_lapnum]]
+    lap['render'] = True
+    logger.info("Marking %s fastest lap: %s" % (fastest_lapnum, lap['lap'].lap_time))
 
 
 def select_laps_to_render(videos, lap_comparison_mode=False,
@@ -305,7 +330,16 @@ if __name__ == '__main__':
         youtube.get_authenticated_service()
 
     if not args.all_laps or args.lap_comparison:
-        select_laps_to_render(matched_videos, args.lap_comparison, args.render_sessions)
+        import pdb; pdb.set_trace()
+        if args.fastest_lap:
+            select_fastest_lap(matched_videos, args.fastest_lap)
+        else:
+            if args.lap_comparison and args.comparison_laps:
+                c_laps = args.comparison_laps.split(",")
+                select_fastest_lap(matched_videos, int(c_laps[0]))
+                select_fastest_lap(matched_videos, int(c_laps[1]))
+            else:
+                select_laps_to_render(matched_videos, args.lap_comparison, args.render_sessions)
 
     if args.manual_offset or args.force_manual_offset:
         for video in matched_videos:

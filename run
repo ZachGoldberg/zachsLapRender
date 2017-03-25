@@ -69,6 +69,26 @@ run_test_real_video2() {
     run_zachs -t='StreetsofWillow(CW)' -vd="/home/zgoldberg/Videos/RacingVideos/StreetsCW1082016/" --input-data-file=laps10082016.csv -vv  $@
 }
 
+run_post_session() {
+    if [ -z $3 ]; then
+        echo "Usage: $0 $1 <trackname> <videodirectory> <inputdatafile>"
+        exit 1
+    fi
+
+
+    # Upload all sessions
+    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -s -y
+
+    # TODO auto discover newest videos / video file
+    # Upload fastest 3 laps
+    run_zachs -t="$1" -vd "$2" --input-data-file=$3 -v -fl 1 -y
+    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -fl 2 -y
+    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -fl 3 -y
+
+    # Upload comparison of fastest two laps
+    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -c -cl 1,2 -r
+}
+
 run_install_completion () {
     echo "[ -x $PWD/run ] && eval \"\`$PWD/run completion\`\"" >> ~/.bashrc
 
