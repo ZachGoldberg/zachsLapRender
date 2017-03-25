@@ -70,23 +70,34 @@ run_test_real_video2() {
 }
 
 run_post_session() {
-    if [ -z $3 ]; then
-        echo "Usage: $0 $1 <trackname> <videodirectory> <inputdatafile>"
+    if [ -z $1 ]; then
+        echo "Usage: $0 $1 <trackname> [videodirectory] [inputdatafile]"
         exit 1
     fi
 
+    track=$1
+    videodir=$2
+    datafile=$3
+
+    if [ -z $videodir ]; then
+        videodir=~/Videos/RacingVideos/`ls ~/Videos/RacingVideos/ --sort=time --group-directories-first | head -n1`
+    fi
+
+    if [ -z $datafile ]; then
+        datafile=`pwd`/lapdata/`ls lapdata/ --sort=time | head -n1`
+    fi
 
     # Upload all sessions
-    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -s -y
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -s -y
 
     # TODO auto discover newest videos / video file
     # Upload fastest 3 laps
-    run_zachs -t="$1" -vd "$2" --input-data-file=$3 -v -fl 1 -y
-    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -fl 2 -y
-    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -fl 3 -y
+    run_zachs -t="$track" -vd "$videodir" --input-data-file=$datafile -v -fl 1 -y
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -fl 2 -y
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -fl 3 -y
 
     # Upload comparison of fastest two laps
-    run_zachs -t="$1" -vd="$2" --input-data-file=$3 -v -c -cl 1,2 -r
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -c -cl 1,2
 }
 
 run_install_completion () {
