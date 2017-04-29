@@ -114,8 +114,9 @@ class DualRenderer(BaseRenderer):
                     self.renderer1.render_frame(frame1, params, lp1, framenum1, lp1.lapinfo["lap"])
                     val['frame'] = frame1
 
-                thread1 = Thread(target=render_vid, args=(t1val, ))
-                thread1.start()
+                if frame1 != None:
+                    thread1 = Thread(target=render_vid, args=(t1val, ))
+                    thread1.start()
             else:
                 # Frame1 will be from the last iteration
                 pass
@@ -126,8 +127,9 @@ class DualRenderer(BaseRenderer):
                     self.renderer2.render_frame(frame2, params, lp2, framenum2, lp2.lapinfo["lap"])
                     val['frame'] = frame2
 
-                thread2 = Thread(target=render_vid2, args=(t2val, ))
-                thread2.start()
+		if frame2 != None:
+                    thread2 = Thread(target=render_vid2, args=(t2val, ))
+                    thread2.start()
             else:
                 # Frame2 will be from the last iteration
                 pass
@@ -139,18 +141,19 @@ class DualRenderer(BaseRenderer):
                 thread2.join()
                 frame2 = t2val['frame']
 
-            merged_frame = self.merge_frames(frame1, frame2)
-            self.render_frame(merged_frame,
+            if frame1 != None and frame2 != None:
+                merged_frame = self.merge_frames(frame1, frame2)
+                self.render_frame(merged_frame,
                               params,
                               (lp1, lp2),
                               (framenum1, framenum2),
                               (lp1.lapinfo['lap'], lp2.lapinfo['lap']))
 
-            out.write(merged_frame)
+                out.write(merged_frame)
 
-            if show_video:
-                cv2.imshow('frame', merged_frame)
-                keypress = cv2.waitKey(1)
+                if show_video:
+                    cv2.imshow('frame', merged_frame)
+                    keypress = cv2.waitKey(1)
 
         logger.debug("Buttoning up video...")
         params.release()

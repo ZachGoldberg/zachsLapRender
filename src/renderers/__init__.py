@@ -63,12 +63,14 @@ class BaseRenderer(object):
 
     @contextmanager
     def alpha(self, alpha, frame):
-        if alpha != 0:
+
+	if alpha != 0:
             beta = 1 - alpha
             gamma = 0
-            overlay = frame.copy()
+            if frame != None:
+                overlay = frame.copy()
         yield
-        if alpha != 0:
+        if alpha != 0 and frame != None:
             cv2.addWeighted(overlay, alpha, frame, beta, gamma, frame)
 
     def alpha_circle(self, frame, origin, radius, color, thickness=1, lineType=8, shift=0, alpha=0):
@@ -398,6 +400,8 @@ class BaseRenderer(object):
                         time.sleep(.1)
 
                     ret, frame = params.get_framenum(lapparams, t_framenum)
+                    if frame == None:
+                        continue
 
                     rendered_frame = self.render_frame(frame,
                                                        params,
