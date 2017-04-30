@@ -401,7 +401,9 @@ class BaseRenderer(object):
 
                     ret, frame = params.get_framenum(lapparams, t_framenum)
                     if frame == None:
-                        continue
+                        t_framenum += 1
+                        thread_results.insert(0, None)
+			continue
 
                     rendered_frame = self.render_frame(frame,
                                                        params,
@@ -421,6 +423,10 @@ class BaseRenderer(object):
                     time.sleep(0.1)
 
                 rendered_frame = thread_results.pop()
+                if rendered_frame == None:
+                  frames_writen += 1
+                  continue
+
                 out.write(rendered_frame)
 
                 if show_video:
