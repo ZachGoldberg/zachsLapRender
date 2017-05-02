@@ -12,6 +12,7 @@ from renderers import BaseRenderer, RenderParams
 from utils import extract_audio, mix_audiofiles
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class DualRenderer(BaseRenderer):
     def __init__(self, video1, video2, subrenderer):
