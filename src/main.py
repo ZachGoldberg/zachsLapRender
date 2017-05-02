@@ -177,7 +177,7 @@ def select_fastest_lap(videos, fastest_lapnum):
     laps = {}
     for video in videos:
         for lap in video.matched_laps:
-            key = str(lap['lap'].lap_time)
+            key = float(lap['lap'].lap_time)
             laps[key] = lap
 
     keys = laps.keys()
@@ -196,7 +196,7 @@ def select_laps_to_render(videos, lap_comparison_mode=False,
     for video in videos:
         for lap in video.matched_laps:
             print lap['lap']
-            key = str(lap['lap'])
+            key = float(lap['lap'])
             laps[key] = lap
             lap["render"] = False
 
@@ -326,15 +326,20 @@ if __name__ == '__main__':
     # that way we can be finished with all user input and just run
     if args.youtube:
         youtube.get_authenticated_service()
+    def unselect_all_videos():
+        for video in matched_videos:
+            for lap in video.matched_laps:
+                lap["render"] = False
 
     if not args.all_laps or args.lap_comparison:
+        unselect_all_videos()
         if args.fastest_lap:
-            select_fastest_lap(matched_videos, args.fastest_lap)
+            select_fastest_lap(matched_videos, args.fastest_lap - 1)
         else:
             if args.lap_comparison and args.comparison_laps:
                 c_laps = args.comparison_laps.split(",")
-                select_fastest_lap(matched_videos, int(c_laps[0]))
-                select_fastest_lap(matched_videos, int(c_laps[1]))
+                select_fastest_lap(matched_videos, int(c_laps[0]) - 1)
+                select_fastest_lap(matched_videos, int(c_laps[1]) - 1)
             else:
                 select_laps_to_render(matched_videos, args.lap_comparison, args.render_sessions)
 
