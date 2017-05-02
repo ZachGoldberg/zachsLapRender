@@ -80,24 +80,32 @@ run_post_session() {
     datafile="$3"
     shift; shift; shift;
 
+    verb="-v"
     if [ -z $videodir ]; then
         videodir=~/Videos/RacingVideos/`ls ~/Videos/RacingVideos/ --sort=time --group-directories-first | head -n1`
     fi
+
+    echo $videodir
 
     if [ -z $datafile ]; then
         datafile=`pwd`/lapdata/`ls lapdata/ --sort=time | head -n1`
     fi
 
     # Upload all sessions
-    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -s -y
+    echo "Rendering all sessions!"
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile $verb -s -y
 
     # TODO auto discover newest videos / video file
     # Upload fastest 3 laps
-    run_zachs -t="$track" -vd "$videodir" --input-data-file=$datafile -v -fl 1 -y
-    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -fl 2 -y
-    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -fl 3 -y
+    echo "Rendering Fastest Lap #1!"
+    run_zachs -t="$track" -vd "$videodir" --input-data-file=$datafile $verb -fl 1 -y
+    echo "Rendering Fastest Lap #2!"
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile $verb -fl 2 -y
+    echo "Rendering Fastest Lap #3!"
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile $verb -fl 3 -y
 
     # Upload comparison of fastest two laps
+    echo "Rendering Comparison of 2 fastest laps"
     run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -c -cl 1,2
 }
 
