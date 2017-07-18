@@ -106,7 +106,7 @@ run_post_session() {
 
     # Upload comparison of fastest two laps
     echo "Rendering Comparison of 2 fastest laps"
-    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -c -cl 1,2
+    run_zachs -t="$track" -vd="$videodir" --input-data-file=$datafile -v -c -cl 1,2 -y
 }
 
 run_install_completion () {

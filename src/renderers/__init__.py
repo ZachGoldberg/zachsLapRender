@@ -506,24 +506,27 @@ class BaseRenderer(object):
             logger.info("Rendering %s..." % (params.newfname))
 
             # Create a new videowriter file
-            fourcc = cv2.cv.CV_FOURCC(*'XVID')
-            out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
+            if not os.path.exists(params.final_newfname):
+              fourcc = cv2.cv.CV_FOURCC(*'XVID')
+              out = cv2.VideoWriter(params.newfname, fourcc, params.fps, (params.width,
                                                                         params.height))
+              self._render_video_file(out, params, show_video=show_video)
+              out.release()
 
-            self._render_video_file(out, params, show_video=show_video)
-            out.release()
+              newaudiofile = tempfile.NamedTemporaryFile().name
+              self._render_audio_file(params, newaudiofile)
 
-            newaudiofile = tempfile.NamedTemporaryFile().name
-            self._render_audio_file(params, newaudiofile)
+              utils.merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
 
-            utils.merge_audio_and_video(params.newfname, newaudiofile, params.final_newfname)
+              os.unlink(newaudiofile)
+              os.unlink(params.newfname)
 
-            os.unlink(newaudiofile)
-            os.unlink(params.newfname)
+              logger.debug("Finished with %s" % params.final_newfname)
 
-            logger.debug("Finished with %s" % params.final_newfname)
-
-            yield (params.final_newfname, lap)
+              yield (params.final_newfname, lap)
+	    else:
+              logger.info("SKIPPING because output already exists!")
+              yield (params.final_newfname, lap)
 
         params.release()
 
