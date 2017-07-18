@@ -31,12 +31,12 @@ class BaseRenderer(object):
     def generate_title(self, args, params):
         laps = self.video.renderable_laps()
         if args.render_sessions:
-            return "ZLR: %s %d laps at %s" % (
+            return "%s %d laps at %s" % (
                 self.video.start_time, len(laps), args.trackname)
         else:
             lap = laps[0]
 
-            return "ZLR: Lap# %s (%s) at %s" % (
+            return "Lap# %s (%s) at %s" % (
                 int(params.lapinfo['lap'].lapnum),
                 params.lapinfo['lap'].get_time(),
                 args.trackname)
